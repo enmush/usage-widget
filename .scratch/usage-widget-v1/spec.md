@@ -39,7 +39,7 @@ A small, borderless, always-on-top window that stays where the user put it and s
 25. As the user, I want a tray icon that shows and hides the window, so that I can clear the screen quickly.
 26. As the user, I want a right-click menu with Refresh, Hide, Start with Windows and Exit, so that every control is one click away.
 27. As the user, I want the widget to start with Windows when I enable it, so that it is always there.
-28. As the user, I want a dark, semi-transparent look that matches Windows 11, so that it does not distract.
+28. As the user, I want a dark, opaque look with rounded corners that matches Windows 11, so that it does not distract and stays readable over bright windows (translucency was tried and let text behind it show through).
 29. As the user, I want the Account list to come from a small settings file, so that a later third Claude Account is a one-line change.
 30. As the user, I want refreshing to cost no model usage, so that checking allowance does not consume it.
 
