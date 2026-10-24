@@ -1,7 +1,7 @@
 namespace UsageWidget.Core;
 
-/// <summary>One Account as configured in the settings file.</summary>
-public sealed record AccountSettings(string Name, string Provider, Dictionary<string, string>? Env = null);
+/// <summary>One Account as configured in the settings file; a Hidden account keeps its settings but has no Row.</summary>
+public sealed record AccountSettings(string Name, string Provider, Dictionary<string, string>? Env = null, bool Hidden = false);
 
 /// <summary>Result of one codexbar-cli run for an Account.</summary>
 public sealed record UsageRead(string? Json, string? Error)

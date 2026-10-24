@@ -1,6 +1,6 @@
 # Usage Widget
 
-A small always-on-top Windows window that shows the remaining allowance of every AI subscription account at once.
+A small desktop window, kept like a sticky note, that shows the remaining allowance of every AI subscription account at once.
 
 ## Language
 
@@ -11,6 +11,14 @@ _Avoid_: Service, vendor, model
 **Account**:
 One signed-in login at a provider; a provider can have several (for example Claude 1 and Claude 2).
 _Avoid_: Profile, user, token account
+
+**Login folder**:
+The folder where a provider's own tool keeps one Account's sign-in, such as `~\.claude-acct2` for a second Claude Account.
+_Avoid_: Profile, config dir, home
+
+**Hidden account**:
+An Account kept in the list but not shown as a Row.
+_Avoid_: Disabled, removed
 
 **Window**:
 A rolling quota period with a used percentage and a reset time, such as the 5-hour session or the weekly limit.

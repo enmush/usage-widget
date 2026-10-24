@@ -12,5 +12,7 @@
         <SolidColorBrush x:Key="BandWarning" Color="#FFC24A" />
         <SolidColorBrush x:Key="BandDanger" Color="#FF6B6B" />
         <SolidColorBrush x:Key="Ticket" Color="#C9A7FF" />
+        <SolidColorBrush x:Key="Hover" Color="#1FFFFFFF" />
+        <SolidColorBrush x:Key="Pressed" Color="#2EFFFFFF" />
     </Application.Resources>
 </Application>

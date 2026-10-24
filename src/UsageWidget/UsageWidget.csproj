@@ -10,15 +10,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>UsageWidget</AssemblyName>
-    <Version>0.1.0</Version>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
-  <!-- WinForms is used only for the tray icon; keep WPF names unambiguous. -->
   <ItemGroup>
-    <Using Remove="System.Windows.Forms" />
-    <Using Remove="System.Drawing" />
+    <Resource Include="app.ico" />
   </ItemGroup>
 
 </Project>

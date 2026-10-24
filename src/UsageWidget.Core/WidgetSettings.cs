@@ -9,17 +9,16 @@ public sealed class WidgetSettings
     public string CodexbarPath { get; set; } = @"%LOCALAPPDATA%\Programs\CodexBar\codexbar-cli.exe";
     public int RefreshMinutes { get; set; } = 5;
     public bool ShowAnnouncements { get; set; } = true;
-    public List<AccountSettings> Accounts { get; set; } = DefaultAccounts();
+    public List<AccountSettings> Accounts { get; set; } = [];
     public double? Left { get; set; }
     public double? Top { get; set; }
 
-    public static List<AccountSettings> DefaultAccounts() =>
-    [
-        new("Claude 1", "claude"),
-        new("Claude 2", "claude", new() { ["CLAUDE_CONFIG_DIR"] = @"%USERPROFILE%\.claude-acct2" }),
-        new("Codex", "codex"),
-        new("Antigravity", "antigravity"),
-    ];
+    [JsonIgnore]
+    public IEnumerable<AccountSettings> VisibleAccounts => Accounts.Where(a => !a.Hidden);
+
+    /// <summary>The Accounts signed in on this PC, used on first run and by "Detect logins".</summary>
+    public static List<AccountSettings> DetectAccounts() =>
+        LoginDetector.Detect(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), LoginDetector.AgyInstalled());
 
     static readonly JsonSerializerOptions Json = new()
     {
@@ -31,25 +30,39 @@ public sealed class WidgetSettings
     public static string DefaultPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "UsageWidget", "settings.json");
 
-    /// <summary>Loads settings, writing defaults on first run; a broken file falls back to defaults without overwriting it.</summary>
-    public static WidgetSettings Load(string path)
+    /// <summary>The copy a broken settings file is kept as, since the next save replaces the original.</summary>
+    public static string BrokenCopyPath(string path) => path + ".broken";
+
+    /// <summary>
+    /// Loads settings. On first run the detected Accounts are written; a broken file falls back to the
+    /// detected Accounts and is first copied to <see cref="BrokenCopyPath"/>, so a hand-edit typo is never lost.
+    /// </summary>
+    public static WidgetSettings Load(string path, Func<List<AccountSettings>> detect)
     {
         try
         {
             if (!File.Exists(path))
             {
-                var fresh = new WidgetSettings();
+                var fresh = new WidgetSettings { Accounts = detect() };
                 fresh.Save(path);
                 return fresh;
             }
             var loaded = JsonSerializer.Deserialize<WidgetSettings>(File.ReadAllText(path), Json) ?? new WidgetSettings();
-            if (loaded.Accounts.Count == 0) loaded.Accounts = DefaultAccounts();
+            loaded.Accounts ??= [];
             if (loaded.RefreshMinutes < 1) loaded.RefreshMinutes = 5;
             return loaded;
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
         {
-            return new WidgetSettings();
+            try
+            {
+                if (File.Exists(path)) File.Copy(path, BrokenCopyPath(path), overwrite: true);
+            }
+            catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
+            {
+                // An unreadable file usually cannot be copied either; the widget still runs on the detected Accounts.
+            }
+            return new WidgetSettings { Accounts = detect() };
         }
     }
 
