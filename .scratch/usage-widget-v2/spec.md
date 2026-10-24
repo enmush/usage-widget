@@ -43,7 +43,7 @@ The widget becomes a normal, borderless desktop window (not always on top) with 
 - **First run:** a missing settings file is created from the detector's result; the hard-coded v1 list is removed.
 - **Rows:** Hidden accounts are skipped when reading and rendering, so they cost no codexbar run.
 - **Panel views:** one window with two views (usage, Accounts) switched by ⚙ and Done; the add form is inline at the bottom of the Accounts view.
-- **Drag:** only a press on the panel background or header text starts a drag; presses on buttons, checkboxes, text fields and lists do not. Click-to-refresh stays on usage Rows.
+- **Drag:** a press anywhere except a control starts a drag, including labels in the Accounts list (user decision, 2026-10-25: blocking moves there is unnecessary); presses on buttons, checkboxes and text fields do not. Click-to-refresh stays on usage Rows.
 
 ## Testing Decisions
 

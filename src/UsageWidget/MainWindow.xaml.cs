@@ -268,8 +268,6 @@ public partial class MainWindow : Window
     void OnPanelMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (IsInsideControl(e.OriginalSource as DependencyObject, (DependencyObject)sender)) return;
-        // The Accounts list is all controls and labels; only the space around it drags.
-        if (e.OriginalSource is Visual source && AccountsList.IsAncestorOf(source)) return;
         var before = (Left, Top);
         DragMove();
         if (before != (Left, Top)) SavePosition();
