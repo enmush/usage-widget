@@ -39,13 +39,14 @@ public sealed class UsageReader(string codexbarPath, TimeSpan timeout)
         var stderr = process.StandardError.ReadToEndAsync(ct);
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
         limit.CancelAfter(timeout);
+        // Kill synchronously inside Cancel(), so an app exit cannot outrun it and orphan the CLI.
+        using var kill = limit.Token.Register(() => KillTree(process));
         try
         {
             await process.WaitForExitAsync(limit.Token);
         }
         catch (OperationCanceledException)
         {
-            try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
             return UsageRead.Failure(ct.IsCancellationRequested ? "Cancelled" : $"Timed out after {timeout.TotalSeconds:0}s");
         }
 
@@ -54,6 +55,12 @@ public sealed class UsageReader(string codexbarPath, TimeSpan timeout)
         return string.IsNullOrWhiteSpace(output)
             ? UsageRead.Failure($"codexbar-cli exited with code {process.ExitCode} and no output")
             : UsageRead.Success(output);
+    }
+
+    static void KillTree(Process process)
+    {
+        try { process.Kill(entireProcessTree: true); }
+        catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { }
     }
 
     static string CurrentPath()

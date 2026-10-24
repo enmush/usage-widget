@@ -13,6 +13,8 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // A widget that silently disappears is worse than one that skips a frame.
+        DispatcherUnhandledException += (_, args) => args.Handled = true;
 
         singleInstance = new Mutex(true, @"Local\UsageWidget.SingleInstance", out var first);
         if (!first)

@@ -23,10 +23,21 @@ public static class Formatter
     }
 
     public static string LocalDateTime(DateTimeOffset time, TimeZoneInfo zone) =>
-        TimeZoneInfo.ConvertTime(time, zone).ToString("M/d HH:mm");
+        TimeZoneInfo.ConvertTime(time, zone).ToString("M'/'d HH:mm", System.Globalization.CultureInfo.InvariantCulture);
 
-    public static string AnnouncementText(AnnouncedReset a, DateTimeOffset now, TimeZoneInfo zone) =>
-        a.ScheduledFor is { } at
-            ? $"reset announced · {ShortDate(at, zone)}, in {Countdown(at, now)}"
-            : $"reset announced {ShortDate(a.AnnouncedAt, zone)}";
+    /// <summary>
+    /// "reset announced · Oct 24, in 5h 0m". The feed keeps a reset pending until it sees it happen,
+    /// so a passed time reads "due", and a reset without a time names the announcement date.
+    /// </summary>
+    public static string AnnouncementText(AnnouncedReset a, DateTimeOffset now, TimeZoneInfo zone)
+    {
+        if (a.ScheduledFor is { } at)
+            return at > now
+                ? $"reset announced · {MonthDay(at, zone)}, in {Countdown(at, now)}"
+                : $"reset announced · due since {MonthDay(at, zone)} {TimeZoneInfo.ConvertTime(at, zone):HH:mm}";
+        return a.AnnouncedAt is { } on ? $"reset announced {MonthDay(on, zone)}, time not given" : "reset announced";
+    }
+
+    static string MonthDay(DateTimeOffset time, TimeZoneInfo zone) =>
+        TimeZoneInfo.ConvertTime(time, zone).ToString("MMM d", System.Globalization.CultureInfo.InvariantCulture);
 }

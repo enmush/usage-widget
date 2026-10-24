@@ -30,11 +30,13 @@ public sealed record Row(
     bool IsStale,
     string? Error)
 {
+    public bool HasData => WeeklyPercent is not null || SessionPercent is not null;
+
     public static Row Empty(string name, string? error) =>
         new(name, null, null, null, null, "Weekly", null, 0, null, null, [], null, false, error);
 }
 
 /// <summary>A provider-wide reset announced ahead of time.</summary>
-public sealed record AnnouncedReset(DateTimeOffset? ScheduledFor, DateTimeOffset AnnouncedAt, string Text, string ResetType);
+public sealed record AnnouncedReset(DateTimeOffset? ScheduledFor, DateTimeOffset? AnnouncedAt, string Text);
 
 public enum Band { Normal, Warning, Danger }

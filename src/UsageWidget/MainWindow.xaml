@@ -77,6 +77,7 @@
             <ItemsControl x:Name="RowsList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
+                        <StackPanel>
                         <Grid Height="26" Opacity="{Binding Opacity}" ToolTip="{Binding Details}" Background="Transparent">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="86" />
@@ -132,12 +133,13 @@
                                 <TextBlock Text="{Binding TicketText}" Foreground="{StaticResource Ticket}" FontSize="10.5" />
                             </Border>
                         </Grid>
+                        <TextBlock Text="{Binding AnnouncementText}" ToolTip="{Binding AnnouncementDetails}"
+                                   Visibility="{Binding AnnouncementVisibility}" Margin="86,-4,0,4"
+                                   Foreground="{StaticResource Ticket}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-
-            <TextBlock x:Name="AnnouncementText" Margin="0,4,0,0" Foreground="{StaticResource Ticket}"
-                       FontSize="11" Visibility="Collapsed" TextTrimming="CharacterEllipsis" />
         </StackPanel>
     </Border>
 </Window>

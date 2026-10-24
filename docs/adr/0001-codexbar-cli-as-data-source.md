@@ -4,6 +4,7 @@ The widget gets every account's windows and reset tickets by running Win-CodexBa
 
 ## Consequences
 
+- Accounts of the same provider are read one after another (different providers in parallel), because codexbar keeps per-provider state files such as its Claude OAuth usage gate that concurrent runs could race on; a hung Claude 1 read can delay Claude 2 by up to its timeout.
 - Win-CodexBar must stay installed; the widget breaks if its JSON shape changes, so parsing is lenient and a failing account shows as stale rather than crashing.
 - Things Win-CodexBar does not provide (announced resets from codex-resets.com, later Dreamina and API budgets) are fetched by the widget itself.
 - Win-CodexBar 0.70.0 reads Claude reset tickets only through browser cookies, so Claude tickets stay hidden until it reads them through OAuth.

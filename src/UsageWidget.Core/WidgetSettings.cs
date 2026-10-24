@@ -34,20 +34,20 @@ public sealed class WidgetSettings
     /// <summary>Loads settings, writing defaults on first run; a broken file falls back to defaults without overwriting it.</summary>
     public static WidgetSettings Load(string path)
     {
-        if (!File.Exists(path))
-        {
-            var fresh = new WidgetSettings();
-            fresh.Save(path);
-            return fresh;
-        }
         try
         {
+            if (!File.Exists(path))
+            {
+                var fresh = new WidgetSettings();
+                fresh.Save(path);
+                return fresh;
+            }
             var loaded = JsonSerializer.Deserialize<WidgetSettings>(File.ReadAllText(path), Json) ?? new WidgetSettings();
             if (loaded.Accounts.Count == 0) loaded.Accounts = DefaultAccounts();
             if (loaded.RefreshMinutes < 1) loaded.RefreshMinutes = 5;
             return loaded;
         }
-        catch (Exception e) when (e is JsonException or IOException)
+        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
         {
             return new WidgetSettings();
         }

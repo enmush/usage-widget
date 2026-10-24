@@ -45,10 +45,10 @@ A small, borderless, always-on-top window that stays where the user put it and s
 
 ## Implementation Decisions
 
-- **Data source (ADR 0001):** each Account is read by running Win-CodexBar's `codexbar-cli usage -p <provider> --json`, with per-Account environment overrides (`CLAUDE_CONFIG_DIR` for the second Claude Account; `ANTIGRAVITY_CLI_PATH` when `agy` is not on PATH). Runs happen in parallel with a timeout per Account. Win-CodexBar's Claude Code credential consent is already enabled on this PC.
+- **Data source (ADR 0001):** each Account is read by running Win-CodexBar's `codexbar-cli usage -p <provider> --json`, with per-Account environment overrides (`CLAUDE_CONFIG_DIR` for the second Claude Account; `ANTIGRAVITY_CLI_PATH` when `agy` is not on PATH). Providers run in parallel, Accounts of one provider in sequence (ADR 0001), each with a timeout. Win-CodexBar's Claude Code credential consent is already enabled on this PC.
 - **Announced reset:** fetched from `https://codex-resets.com/api/v1/status`; the `data.scheduled_reset` object (`scheduled_for`, `announced_at`, `reset_type`, `text`) drives the line. The source is unofficial; failures hide the line silently.
 - **Modules:**
-  - *Account settings*: a JSON file in the user's AppData listing Accounts (display name, provider id, environment overrides) plus window position and the start-with-Windows flag; defaults to the four known Accounts.
+  - *Account settings*: a JSON file in the user's AppData listing Accounts (display name, provider id, environment overrides) plus window position; defaults to the four known Accounts. The start-with-Windows flag lives only in the Run registry value, so the menu and Windows never disagree.
   - *Usage reader*: runs the CLI for one Account and returns the raw JSON text or a failure.
   - *Snapshot builder* (pure): turns raw codexbar JSON per Account, the codex-resets status JSON, the previous snapshot and the current time into a list of Row models (name, 5-hour percent or none, weekly percent, nearest reset time, ticket count and nearest expiry, stale flag and error, hover details) plus an optional Announced reset model. All parsing is lenient: unknown or missing fields never throw.
   - *Formatter* (pure): countdown text ("32m", "2h 22m", "6d 4h"), local date text, colour band for a percent.

@@ -22,12 +22,19 @@ sealed class RowView
     public required double Opacity { get; init; }
     public required string Details { get; init; }
     public required Visibility StaleVisibility { get; init; }
+    public required string AnnouncementText { get; init; }
+    public required string AnnouncementDetails { get; init; }
+    public required Visibility AnnouncementVisibility { get; init; }
 
-    public static RowView From(Row row, DateTimeOffset now, TimeZoneInfo zone)
+    /// <param name="announcement">Shown under this Row only when it belongs to the Account the announcement is about.</param>
+    public static RowView From(Row row, AnnouncedReset? announcement, DateTimeOffset now, TimeZoneInfo zone)
     {
-        var hasData = row.WeeklyPercent is not null || row.SessionPercent is not null;
+        var hasData = row.HasData;
         return new RowView
         {
+            AnnouncementText = announcement is null ? "" : Formatter.AnnouncementText(announcement, now, zone),
+            AnnouncementDetails = announcement?.Text ?? "",
+            AnnouncementVisibility = announcement is null ? Visibility.Collapsed : Visibility.Visible,
             Name = row.Name,
             SessionText = Percent(row.SessionPercent),
             SessionFraction = Fraction(row.SessionPercent),
@@ -61,18 +68,20 @@ sealed class RowView
 
     static string DescribeRow(Row row, TimeZoneInfo zone)
     {
+        string At(string label, DateTimeOffset? time) => time is { } t ? $", {label} {Formatter.LocalDateTime(t, zone)}" : "";
+
         var sb = new StringBuilder(row.Name);
         if (row.Plan is { } plan) sb.Append(" · ").Append(plan);
         if (row.SessionPercent is { } s)
-            sb.Append($"\n5-hour: {s:0}%").Append(row.SessionResetsAt is { } sr ? $", resets {Formatter.LocalDateTime(sr, zone)}" : "");
+            sb.Append($"\n5-hour: {s:0}%").Append(At("resets", row.SessionResetsAt));
         else if (row.WeeklyPercent is not null)
             sb.Append("\n5-hour: no active session");
         if (row.WeeklyPercent is { } w)
-            sb.Append($"\n{row.WeeklyLabel}: {w:0}%").Append(row.WeeklyResetsAt is { } wr ? $", resets {Formatter.LocalDateTime(wr, zone)}" : "");
+            sb.Append($"\n{row.WeeklyLabel}: {w:0}%").Append(At("resets", row.WeeklyResetsAt));
         foreach (var extra in row.Extras)
-            sb.Append($"\n{extra.Title}: {extra.UsedPercent:0}%").Append(extra.ResetsAt is { } er ? $", resets {Formatter.LocalDateTime(er, zone)}" : "");
+            sb.Append($"\n{extra.Title}: {extra.UsedPercent:0}%").Append(At("resets", extra.ResetsAt));
         if (row.TicketCount > 0)
-            sb.Append($"\nReset tickets: {row.TicketCount}").Append(row.TicketExpiry is { } te ? $", nearest expiry {Formatter.LocalDateTime(te, zone)}" : "");
+            sb.Append($"\nReset tickets: {row.TicketCount}").Append(At("nearest expiry", row.TicketExpiry));
         if (row.Error is { } err)
             sb.Append(row.IsStale ? "\nStale — last read failed: " : "\nNot available: ").Append(err);
         if (row.UpdatedAt is { } u)

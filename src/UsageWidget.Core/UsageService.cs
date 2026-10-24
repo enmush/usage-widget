@@ -19,7 +19,16 @@ public sealed class UsageService(WidgetSettings settings, HttpClient http)
         await Task.WhenAll(Enumerable.Range(0, accounts.Count).GroupBy(i => accounts[i].Provider).Select(async group =>
         {
             foreach (var i in group)
-                reads[i] = await reader.ReadAsync(accounts[i], ct);
+            {
+                try
+                {
+                    reads[i] = await reader.ReadAsync(accounts[i], ct);
+                }
+                catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    reads[i] = UsageRead.Failure(e.Message);
+                }
+            }
         }));
 
         var now = DateTimeOffset.Now;

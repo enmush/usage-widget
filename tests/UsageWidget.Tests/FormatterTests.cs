@@ -46,16 +46,36 @@ public class FormatterTests
     [Fact]
     public void Announcement_text_names_date_and_countdown()
     {
-        var utc = TimeZoneInfo.Utc;
-        var a = new AnnouncedReset(Now.AddHours(5), Now.AddHours(-1), "Resetting tonight", "regular");
-        Assert.Equal("reset announced · 10/24, in 5h 0m", Formatter.AnnouncementText(a, Now, utc));
+        var a = new AnnouncedReset(Now.AddHours(5), Now.AddHours(-1), "Resetting tonight");
+        Assert.Equal("reset announced · Oct 24, in 5h 0m", Formatter.AnnouncementText(a, Now, TimeZoneInfo.Utc));
     }
 
     [Fact]
-    public void Announcement_without_a_time_says_announced_on_date()
+    public void Announcement_past_its_time_reads_due()
     {
-        var utc = TimeZoneInfo.Utc;
-        var a = new AnnouncedReset(null, Now.AddHours(-1), "Soon", "regular");
-        Assert.Equal("reset announced 10/24", Formatter.AnnouncementText(a, Now, utc));
+        var a = new AnnouncedReset(Now.AddMinutes(-30), Now.AddHours(-3), "Resetting soon");
+        Assert.Equal("reset announced · due since Oct 24 13:30", Formatter.AnnouncementText(a, Now, TimeZoneInfo.Utc));
+    }
+
+    [Fact]
+    public void Announcement_without_a_time_names_the_announcement_date()
+    {
+        var a = new AnnouncedReset(null, Now.AddHours(-1), "Soon");
+        Assert.Equal("reset announced Oct 24, time not given", Formatter.AnnouncementText(a, Now, TimeZoneInfo.Utc));
+    }
+
+    [Fact]
+    public void Local_date_time_ignores_the_culture_date_separator()
+    {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("ko-KR");
+            Assert.Equal("10/24 14:00", Formatter.LocalDateTime(Now, TimeZoneInfo.Utc));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
     }
 }

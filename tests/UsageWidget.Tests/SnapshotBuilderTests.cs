@@ -105,6 +105,16 @@ public class SnapshotBuilderTests
     }
 
     [Fact]
+    public void Huge_ticket_count_text_does_not_crash()
+    {
+        var raw = Fixture("codex.json").Replace("1 reset credit available", "99999999999999999999 reset credits available");
+        var row = SnapshotBuilder.BuildRow(new AccountSettings("Codex", "codex"), UsageRead.Success(raw), null, Now);
+
+        Assert.Null(row.Error);
+        Assert.Equal(1, row.TicketCount);
+    }
+
+    [Fact]
     public void Past_reset_times_are_ignored_for_nearest_reset()
     {
         var later = DateTimeOffset.Parse("2026-10-25T00:00:00Z");
@@ -135,6 +145,18 @@ public class SnapshotBuilderTests
         Assert.NotNull(a);
         Assert.Equal(DateTimeOffset.Parse("2026-10-24T20:00:00Z"), a!.ScheduledFor);
         Assert.Equal("Resetting tonight", a.Text);
+    }
+
+    [Fact]
+    public void Announcement_with_a_time_but_no_announcement_date_is_kept()
+    {
+        const string feed = """{"data":{"scheduled_reset":{"scheduled_for":"2026-10-25T01:00:00Z","text":"Tomorrow"}}}""";
+
+        var a = SnapshotBuilder.ParseAnnouncement(feed);
+
+        Assert.NotNull(a);
+        Assert.Null(a!.AnnouncedAt);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-25T01:00:00Z"), a.ScheduledFor);
     }
 
     [Theory]

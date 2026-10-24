@@ -68,6 +68,11 @@ public partial class MainWindow : Window
         {
             return;
         }
+        catch (Exception e)
+        {
+            // Keep the last Rows on screen; per-Account failures are already handled inside the service.
+            rows = rows.Select(r => r.HasData ? r with { IsStale = true, Error = e.Message } : r with { Error = e.Message }).ToList();
+        }
         finally
         {
             refreshing = false;
@@ -82,19 +87,12 @@ public partial class MainWindow : Window
     void Render()
     {
         var now = DateTimeOffset.Now;
-        RowsList.ItemsSource = rows.Select(r => RowView.From(r, now, zone)).ToList();
+        // The announced-reset feed is about Codex, so its line sits under the Codex Row(s).
+        RowsList.ItemsSource = rows
+            .Select((r, i) => RowView.From(
+                r, settings.Accounts.ElementAtOrDefault(i)?.Provider == "codex" ? announcement : null, now, zone))
+            .ToList();
         UpdatedText.Text = lastRefresh is { } t ? $"updated {TimeZoneInfo.ConvertTime(t, zone):HH:mm}" : "loading…";
-
-        if (announcement is { } a && (a.ScheduledFor is null || a.ScheduledFor > now.AddHours(-1)))
-        {
-            AnnouncementText.Text = "Codex " + Formatter.AnnouncementText(a, now, zone);
-            AnnouncementText.ToolTip = a.Text;
-            AnnouncementText.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            AnnouncementText.Visibility = Visibility.Collapsed;
-        }
     }
 
     // Dragging moves the widget; a press that does not move it counts as a click and refreshes.

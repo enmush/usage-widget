@@ -21,14 +21,15 @@ public static partial class SnapshotBuilder
             {
                 fresh = ParseRow(account.Name, read.Json ?? "", now, out error);
             }
-            catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException)
+            catch (Exception)
             {
+                // ADR 0001: any surprise in codexbar output marks the Account stale instead of crashing.
                 error = "Unreadable usage output";
             }
         }
 
         if (fresh is not null) return fresh;
-        if (previous is { WeeklyPercent: not null } or { SessionPercent: not null })
+        if (previous is { HasData: true })
             return previous with { IsStale = true, Error = error };
         return Row.Empty(account.Name, error);
     }
@@ -125,11 +126,12 @@ public static partial class SnapshotBuilder
                 || s.ValueKind != JsonValueKind.Object)
                 return null;
 
+            var scheduled = Time(s, "scheduled_for");
             var announced = Time(s, "announced_at");
-            if (announced is null) return null;
-            return new AnnouncedReset(Time(s, "scheduled_for"), announced.Value, Str(s, "text") ?? "", Str(s, "reset_type") ?? "regular");
+            if (scheduled is null && announced is null) return null;
+            return new AnnouncedReset(scheduled, announced, Str(s, "text") ?? "");
         }
-        catch (JsonException)
+        catch (Exception)
         {
             return null;
         }
@@ -150,7 +152,7 @@ public static partial class SnapshotBuilder
     {
         if (description is null) return 1;
         var m = LeadingNumber().Match(description);
-        return m.Success ? int.Parse(m.Value) : 1;
+        return m.Success && int.TryParse(m.Value, out var count) ? count : 1;
     }
 
     static string? Str(JsonElement e, string name) =>
