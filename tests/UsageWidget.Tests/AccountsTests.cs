@@ -77,6 +77,18 @@ public sealed class AccountsTests : IDisposable
     }
 
     [Fact]
+    public void A_new_account_must_differ_from_the_list_in_name_and_sign_in()
+    {
+        var work = Folder(".codex-work");
+        List<AccountSettings> existing = [new("Codex", "codex"), new("Work", "codex", new() { ["CODEX_HOME"] = work })];
+
+        Assert.Equal("That name is already used.", AccountCatalog.Create("codex", "codex", "", home, existing).Error);
+        Assert.Equal("That sign-in is already listed as Codex.", AccountCatalog.Create("Main", "codex", "", home, existing).Error);
+        Assert.Equal("That sign-in is already listed as Work.", AccountCatalog.Create("Again", "codex", work, home, existing).Error);
+        Assert.NotNull(AccountCatalog.Create("Claude", "claude", "", home, existing).Account);
+    }
+
+    [Fact]
     public void Empty_folder_means_the_default_folder()
     {
         var (account, error) = AccountCatalog.Create("Codex", "codex", "", home);

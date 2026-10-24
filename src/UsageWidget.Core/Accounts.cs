@@ -38,7 +38,19 @@ public static class AccountCatalog
             : folder;
     }
 
-    public static (AccountSettings? Account, string? Error) Create(string name, string providerId, string? folder, string home)
+    /// <param name="existing">Accounts already listed; the new one must differ in name and in sign-in.</param>
+    public static (AccountSettings? Account, string? Error) Create(
+        string name, string providerId, string? folder, string home, IReadOnlyList<AccountSettings>? existing = null)
+    {
+        var (account, error) = Build(name, providerId, folder, home);
+        if (account is null || existing is null) return (account, error);
+        if (existing.Any(a => SameName(a.Name, account.Name))) return (null, "That name is already used.");
+        if (existing.FirstOrDefault(a => SameLogin(a, account, home)) is { } same)
+            return (null, $"That sign-in is already listed as {same.Name}.");
+        return (account, null);
+    }
+
+    static (AccountSettings? Account, string? Error) Build(string name, string providerId, string? folder, string home)
     {
         if (string.IsNullOrWhiteSpace(name)) return (null, "Enter a name.");
         if (Find(providerId) is not { } provider) return (null, "Unknown provider.");
@@ -98,12 +110,7 @@ public static class LoginDetector
     /// <summary>Whether Antigravity's agy CLI is installed (on PATH, in its winget package folder, or its own bin folder).</summary>
     public static bool AgyInstalled()
     {
-        var path = string.Join(';',
-            Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine),
-            Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User));
-        if (path.Split(';', StringSplitOptions.RemoveEmptyEntries)
-            .Any(dir => File.Exists(Path.Combine(Environment.ExpandEnvironmentVariables(dir), "agy.exe"))))
-            return true;
+        if (SystemPath.Contains("agy.exe")) return true;
 
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var packages = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");

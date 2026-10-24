@@ -7,6 +7,7 @@ A small sticky-note Windows widget (WPF, .NET 10; a normal desktop window with a
 - Build: `dotnet build src/UsageWidget`
 - Test: `dotnet test tests/UsageWidget.Tests`
 - Run: `dotnet run --project src/UsageWidget`
+- Release packages: `powershell -File tools/publish.ps1` (tests, then both zips and `SHA256SUMS.txt` in `artifacts/release`)
 - Requires Win-CodexBar installed (`codexbar-cli.exe` under `%LOCALAPPDATA%\Programs\CodexBar`); see ADR 0001.
 
 ## Agent skills

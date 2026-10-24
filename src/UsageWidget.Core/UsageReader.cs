@@ -20,8 +20,7 @@ public sealed class UsageReader(string codexbarPath, TimeSpan timeout)
         foreach (var arg in new[] { "usage", "-p", account.Provider, "--json", "--no-color" })
             psi.ArgumentList.Add(arg);
 
-        // A widget started before an installer changed PATH (for example Antigravity's agy) would not see it.
-        psi.Environment["PATH"] = CurrentPath();
+        psi.Environment["PATH"] = SystemPath.Current();
         foreach (var (key, value) in account.Env ?? [])
             psi.Environment[key] = Environment.ExpandEnvironmentVariables(value);
 
@@ -61,12 +60,5 @@ public sealed class UsageReader(string codexbarPath, TimeSpan timeout)
     {
         try { process.Kill(entireProcessTree: true); }
         catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { }
-    }
-
-    static string CurrentPath()
-    {
-        var machine = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? "";
-        var user = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? "";
-        return Environment.ExpandEnvironmentVariables(machine + ";" + user);
     }
 }

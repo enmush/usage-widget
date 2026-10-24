@@ -32,7 +32,7 @@ public partial class App : Application
             var settingsPath = WidgetSettings.DefaultPath;
             var settings = WidgetSettings.Load(settingsPath, WidgetSettings.DetectAccounts);
             var http = new HttpClient();
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("UsageWidget/0.2");
+            http.DefaultRequestHeaders.UserAgent.ParseAdd($"UsageWidget/{typeof(App).Assembly.GetName().Version?.ToString(3)}");
 
             window = new MainWindow(settings, settingsPath, new UsageService(settings, http));
             window.ExitRequested += ExitApp;
