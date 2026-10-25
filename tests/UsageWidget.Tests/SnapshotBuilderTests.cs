@@ -23,7 +23,8 @@ public class SnapshotBuilderTests
         Assert.Equal("Claude 1", row.Name);
         Assert.Equal(19, row.SessionPercent);
         Assert.Equal(41, row.WeeklyPercent);
-        Assert.Equal(DateTimeOffset.Parse("2026-10-25T15:50:00.416045Z"), row.NearestReset);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-25T15:50:00.416045Z"), row.SessionResetsAt);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-30T20:00:00.416112Z"), row.WeeklyResetsAt);
         Assert.Equal("Claude Pro", row.Plan);
         Assert.Empty(row.Extras);
         Assert.Equal(0, row.TicketCount);
@@ -226,16 +227,6 @@ public class SnapshotBuilderTests
 
         Assert.True(row.IsStale);
         Assert.Equal(new ApiUsage(2, 30), row.Api);
-    }
-
-    [Fact]
-    public void Past_reset_times_are_ignored_for_nearest_reset()
-    {
-        var later = DateTimeOffset.Parse("2026-10-26T00:00:00Z");
-
-        var row = Fresh(ClaudeReader.Parse("Claude 1", Fixture("claude-api1.json"), null, later));
-
-        Assert.Equal(DateTimeOffset.Parse("2026-10-30T20:00:00.416112Z"), row.NearestReset);
     }
 
     [Fact]

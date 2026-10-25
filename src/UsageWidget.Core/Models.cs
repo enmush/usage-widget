@@ -24,7 +24,6 @@ public sealed record Row(
     double? WeeklyPercent,
     DateTimeOffset? WeeklyResetsAt,
     string WeeklyLabel,
-    DateTimeOffset? NearestReset,
     int TicketCount,
     DateTimeOffset? TicketExpiry,
     string? Plan,
@@ -37,7 +36,7 @@ public sealed record Row(
     public bool HasData => WeeklyPercent is not null || SessionPercent is not null || Api is not null;
 
     public static Row Empty(string name, string? error) =>
-        new(name, null, null, null, null, "Weekly", null, 0, null, null, [], null, false, error);
+        new(name, null, null, null, null, "Weekly", 0, null, null, [], null, false, error);
 }
 
 /// <summary>A provider-wide reset announced ahead of time.</summary>

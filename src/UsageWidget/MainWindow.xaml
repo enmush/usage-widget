@@ -181,7 +181,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="1" Text="5-hour" Style="{StaticResource Caption}" />
                     <TextBlock Grid.Column="3" Text="weekly" Style="{StaticResource Caption}" />
-                    <TextBlock Grid.Column="4" Text="next reset" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Column="4" Text="weekly reset" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                     <TextBlock Grid.Column="5" Text="tickets" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
                 </Grid>
 
@@ -189,7 +189,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
-                                <Grid Height="26" Opacity="{Binding Opacity}" ToolTip="{Binding Details}" Background="Transparent">
+                                <Grid Height="32" Opacity="{Binding Opacity}" ToolTip="{Binding Details}" Background="Transparent">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="86" />
                                         <ColumnDefinition Width="*" />
@@ -212,6 +212,8 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding SessionResetText}" VerticalAlignment="Top" FontSize="9.5"
+                                                   Foreground="{StaticResource TextSecondary}" Margin="0,1,0,0" />
                                         <Border Style="{StaticResource BarTrack}" Visibility="{Binding SessionBarVisibility}">
                                             <Border Style="{StaticResource BarFill}" Background="{Binding SessionBrush}">
                                                 <Border.RenderTransform>

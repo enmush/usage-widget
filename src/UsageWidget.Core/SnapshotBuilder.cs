@@ -20,16 +20,15 @@ public static class SnapshotBuilder
         return Row.Empty(account.Name, error);
     }
 
-    /// <summary>A fresh Row from parsed Windows; the nearest reset is the earliest future one of session and weekly.</summary>
+    /// <summary>A fresh Row from parsed Windows.</summary>
     public static Row Compose(
         string name, UsageWindow? session, UsageWindow? weekly, DateTimeOffset now,
         string weeklyLabel = "Weekly", int tickets = 0, DateTimeOffset? ticketExpiry = null,
         string? plan = null, IReadOnlyList<ExtraWindow>? extras = null)
     {
-        var nearest = new[] { session?.ResetsAt, weekly?.ResetsAt }.Where(t => t > now).Min();
         return new Row(
             name, session?.Percent, session?.ResetsAt, weekly?.Percent, weekly?.ResetsAt, weeklyLabel,
-            nearest, tickets, ticketExpiry, plan, extras ?? [], now, false, null);
+            tickets, ticketExpiry, plan, extras ?? [], now, false, null);
     }
 
     /// <summary>

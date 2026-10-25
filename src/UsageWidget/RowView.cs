@@ -13,6 +13,7 @@ sealed class RowView
     public required double SessionFraction { get; init; }
     public required Brush SessionBrush { get; init; }
     public required Visibility SessionBarVisibility { get; init; }
+    public required string SessionResetText { get; init; }
     public required string WeeklyText { get; init; }
     public required double WeeklyFraction { get; init; }
     public required Brush WeeklyBrush { get; init; }
@@ -59,7 +60,9 @@ sealed class RowView
             LinkUrl = row.Api is null ? "" : AiStudioBillingUrl,
             LinkTip = row.Api is null ? "" : "Open AI Studio billing in your browser to see the prepaid balance",
             LinkVisibility = row.Api is null ? Visibility.Collapsed : Visibility.Visible,
-            ResetText = row.NearestReset is { } at ? "↻ " + Formatter.Countdown(at, now) : hasData ? "" : "—",
+            // The 5-hour countdown sits over its own bar; the reset column is the weekly Window's.
+            SessionResetText = row.SessionPercent is not null && row.SessionResetsAt is { } s && s > now ? "↻ " + Formatter.Countdown(s, now) : "",
+            ResetText = row.WeeklyResetsAt is { } at && at > now ? "↻ " + Formatter.Countdown(at, now) : hasData ? "" : "—",
             TicketText = row.TicketCount > 0
                 ? $"{row.TicketCount}" + (row.TicketExpiry is { } exp ? " · " + Formatter.ShortDate(exp, zone) : "")
                 : "",
