@@ -20,8 +20,6 @@ SmartScreen 경고가 뜨면 **추가 정보 → 실행**을 누릅니다. 서�
 - 각 서비스의 CLI 로그인: `claude`(Claude Code), `codex`(ChatGPT 계정으로 로그인), `agy`(Antigravity CLI 1.1.11 이상)
 - Gemini API 행: [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)에 `gcloud auth login`으로 로그인하고, 해당 project에서 Cloud Monitoring API를 켭니다.
 
-Win-CodexBar 같은 다른 앱은 필요 없습니다.
-
 ## 화면 보는 법
 
 | 칸 | 내용 |
