@@ -16,12 +16,12 @@ public sealed class WidgetSettings
     public IEnumerable<AccountSettings> VisibleAccounts => Accounts.Where(a => !a.Hidden);
 
     /// <summary>The Accounts signed in on this PC, used on first run and by "Detect logins".</summary>
-    /// Runs on the thread pool, so the gcloud lookup never blocks on a UI thread's synchronization context.
-    public static List<AccountSettings> DetectAccounts() => Task.Run(async () =>
+    /// The Gemini API lookup runs gcloud for a few seconds, so the first run skips it and only "Detect logins" does it.
+    public static List<AccountSettings> DetectAccounts(bool includeGeminiApi = false) => Task.Run(async () =>
         LoginDetector.Detect(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             LoginDetector.AgyPath() is not null,
-            await LoginDetector.GeminiApiProjectAsync(CancellationToken.None))).GetAwaiter().GetResult();
+            includeGeminiApi ? await LoginDetector.GeminiApiProjectAsync(CancellationToken.None) : null)).GetAwaiter().GetResult();
 
     static readonly JsonSerializerOptions Json = new()
     {

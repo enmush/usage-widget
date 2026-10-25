@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace UsageWidget.Core;
 
@@ -49,8 +51,8 @@ public sealed class GeminiApiReader(HttpClient http, CliRunner runner, Func<stri
         var query = string.Join("&", new Dictionary<string, string>
         {
             ["filter"] = $"metric.type=\"serviceruntime.googleapis.com/api/request_count\" AND resource.labels.service=\"{Service}\"",
-            ["interval.startTime"] = end.AddSeconds(-seconds).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-            ["interval.endTime"] = end.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            ["interval.startTime"] = Rfc3339(end.AddSeconds(-seconds)),
+            ["interval.endTime"] = Rfc3339(end),
             ["aggregation.alignmentPeriod"] = $"{seconds}s",
             ["aggregation.perSeriesAligner"] = "ALIGN_SUM",
             ["aggregation.crossSeriesReducer"] = "REDUCE_SUM",
@@ -66,18 +68,22 @@ public sealed class GeminiApiReader(HttpClient http, CliRunner runner, Func<stri
         return ParseCount(await response.Content.ReadAsStringAsync(ct)) is { } count ? (count, null) : (0, "Unreadable Cloud Monitoring output");
     }
 
+    static string Rfc3339(DateTimeOffset t) => t.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+
     /// <summary>The sum of every point in a timeSeries response; a response with no series means no requests.</summary>
     public static long? ParseCount(string json)
     {
-        var read = SnapshotBuilder.Parse(json, root =>
+        try
         {
-            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return UsageRead.Failure("Not an object");
-            long total = 0;
-            foreach (var series in JsonRead.Array(root, "timeSeries"))
-                foreach (var point in JsonRead.Array(series, "points"))
-                    total += JsonRead.Obj(point, "value") is { } v ? JsonRead.Long(v, "int64Value") ?? 0 : 0;
-            return UsageRead.Success(Row.Empty("", null) with { Api = new ApiUsage(total, total) });
-        });
-        return read.Row?.Api?.Today;
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return null;
+            return JsonRead.Array(doc.RootElement, "timeSeries")
+                .SelectMany(series => JsonRead.Array(series, "points"))
+                .Sum(point => JsonRead.Obj(point, "value") is { } v ? JsonRead.Long(v, "int64Value") ?? 0 : 0);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

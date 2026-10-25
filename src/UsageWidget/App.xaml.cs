@@ -30,7 +30,7 @@ public partial class App : Application
         try
         {
             var settingsPath = WidgetSettings.DefaultPath;
-            var settings = WidgetSettings.Load(settingsPath, WidgetSettings.DetectAccounts);
+            var settings = WidgetSettings.Load(settingsPath, () => WidgetSettings.DetectAccounts());
             var http = new HttpClient();
             http.DefaultRequestHeaders.UserAgent.ParseAdd($"UsageWidget/{typeof(App).Assembly.GetName().Version?.ToString(3)}");
 

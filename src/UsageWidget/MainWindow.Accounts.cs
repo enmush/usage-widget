@@ -72,7 +72,7 @@ public partial class MainWindow
         List<AccountSettings> detected;
         try
         {
-            detected = await Task.Run(WidgetSettings.DetectAccounts);
+            detected = await Task.Run(() => WidgetSettings.DetectAccounts(includeGeminiApi: true));
         }
         finally
         {

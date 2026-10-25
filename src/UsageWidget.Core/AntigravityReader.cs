@@ -41,14 +41,15 @@ public sealed class AntigravityReader(CliRunner runner, Func<string?> findAgy, F
                     if (JsonRead.Num(bucket, "remaining_fraction") is not { } remaining) continue;
                     var window = new UsageWindow(Math.Round((1 - remaining) * 100, 2), JsonRead.Time(bucket, "reset_time"));
                     if (JsonRead.Str(bucket, "id") == "gemini-weekly") weekly = window;
-                    else extras.Add(new ExtraWindow(GroupTitle(JsonRead.Str(group, "name")), window.Percent, window.ResetsAt));
+                    else extras.Add(new ExtraWindow(
+                        GroupTitle(JsonRead.Str(group, "name"), JsonRead.Str(bucket, "window")), window.Percent, window.ResetsAt));
                 }
             }
-            if (weekly is null) return UsageRead.Failure("No Gemini weekly limit in agy's usage report");
+            if (weekly is null) return UsageRead.Failure("No Gemini weekly Window in agy's usage report");
             return UsageRead.Success(SnapshotBuilder.Compose(name, null, weekly, now, weeklyLabel: "Gemini Weekly", extras: extras));
         });
 
-    /// <summary>"Claude and GPT models" → "Claude/GPT weekly".</summary>
-    static string GroupTitle(string? group) =>
-        (group ?? "Other").Replace(" models", "", StringComparison.OrdinalIgnoreCase).Replace(" and ", "/") + " weekly";
+    /// <summary>"Claude and GPT models" with a weekly window → "Claude/GPT weekly".</summary>
+    static string GroupTitle(string? group, string? window) =>
+        (group ?? "Other").Replace(" models", "", StringComparison.OrdinalIgnoreCase).Replace(" and ", "/") + " " + (window ?? "window");
 }

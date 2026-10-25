@@ -108,7 +108,7 @@ public static class LoginDetector
         AddFolders(found, home, AccountCatalog.Find("codex")!, defaultNeedsMarker: true);
         if (agyFound) found.Add(new AccountSettings("Antigravity", "antigravity"));
         if (geminiApiProject is not null)
-            found.Add(new AccountSettings("Gemini API", "gemini-api", new() { ["GOOGLE_CLOUD_PROJECT"] = geminiApiProject }));
+            found.Add(AccountCatalog.Create("Gemini API", "gemini-api", geminiApiProject, home).Account!);
         return found;
     }
 

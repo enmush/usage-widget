@@ -78,7 +78,7 @@ public sealed partial class ClaudeReader(HttpClient http, string home, Func<Date
         {
             Credentials.Save(path, access, refresh, expiresAt);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or NullReferenceException or InvalidOperationException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
             // The tokens still work for this read; Claude Code will ask to sign in again if the file stays old.
         }
@@ -92,7 +92,7 @@ public sealed partial class ClaudeReader(HttpClient http, string home, Func<Date
             var weekly = Window(JsonRead.Obj(root, "seven_day"));
             if (session is null && weekly is null) return UsageRead.Failure("No usage windows");
 
-            // Model-scoped weekly limits (for example "Fable only") are shown on hover.
+            // Model-scoped weekly Windows (for example "Fable only") are shown on hover.
             var extras = JsonRead.Array(root, "limits")
                 .Where(l => JsonRead.Str(l, "kind") == "weekly_scoped")
                 .Select(l => (Model: JsonRead.Obj(l, "scope") is { } s && JsonRead.Obj(s, "model") is { } m ? JsonRead.Str(m, "display_name") : null, Limit: l))
@@ -137,8 +137,8 @@ public sealed partial class ClaudeReader(HttpClient http, string home, Func<Date
         /// <summary>Replaces only the token fields, through a temp file, so a crash never leaves half a file.</summary>
         public static void Save(string path, string access, string refresh, DateTimeOffset expiresAt)
         {
-            var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
-            var oauth = root["claudeAiOauth"]!.AsObject();
+            if (JsonNode.Parse(File.ReadAllText(path)) is not JsonObject root || root["claudeAiOauth"] is not JsonObject oauth)
+                throw new JsonException("No claudeAiOauth object");
             oauth["accessToken"] = access;
             oauth["refreshToken"] = refresh;
             oauth["expiresAt"] = expiresAt.ToUnixTimeMilliseconds();

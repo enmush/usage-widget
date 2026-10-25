@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace UsageWidget.Core;
 
-/// <summary>Reads a Codex Account from ChatGPT's usage and reset-credit endpoints with its Login folder's sign-in (ADR 0003).</summary>
+/// <summary>Reads a Codex Account (Windows and Reset tickets) from ChatGPT's usage endpoints with its Login folder's sign-in (ADR 0003).</summary>
 public sealed class CodexReader(HttpClient http, string home, Func<DateTimeOffset> clock)
 {
     const string UsageUrl = "https://chatgpt.com/backend-api/wham/usage";
@@ -58,7 +58,7 @@ public sealed class CodexReader(HttpClient http, string home, Func<DateTimeOffse
     public static UsageRead Parse(string name, string usage, string? credits, DateTimeOffset now) =>
         SnapshotBuilder.Parse(usage, root =>
         {
-            // Windows are told apart by length: Codex reports the weekly one as primary when there is no 5-hour limit.
+            // Windows are told apart by length: Codex reports the weekly one as primary when there is no 5-hour Window.
             UsageWindow? session = null, weekly = null;
             if (JsonRead.Obj(root, "rate_limit") is { } limits)
             {

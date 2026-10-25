@@ -8,7 +8,8 @@ public sealed class UsageService(WidgetSettings settings, HttpClient http)
 
     readonly ClaudeReader claude = new(http, Home, () => DateTimeOffset.Now);
     readonly CodexReader codex = new(http, Home, () => DateTimeOffset.Now);
-    readonly AntigravityReader antigravity = new(new CliRunner(ReadTimeout), LoginDetector.AgyPath, () => DateTimeOffset.Now);
+    // Shorter than ReadTimeout, so a hung agy is reported as timed out rather than cancelled.
+    readonly AntigravityReader antigravity = new(new CliRunner(ReadTimeout - TimeSpan.FromSeconds(10)), LoginDetector.AgyPath, () => DateTimeOffset.Now);
     readonly GeminiApiReader geminiApi = new(
         http, new CliRunner(TimeSpan.FromSeconds(30)), LoginDetector.GcloudPath, () => DateTimeOffset.Now, TimeZoneInfo.Local);
 
@@ -52,6 +53,11 @@ public sealed class UsageService(WidgetSettings settings, HttpClient http)
         catch (HttpRequestException e)
         {
             return UsageRead.Failure("Network error: " + e.Message);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // One Account's surprise must not fail the whole refresh and mark every Row stale.
+            return UsageRead.Failure(e.Message);
         }
     }
 

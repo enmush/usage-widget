@@ -11,7 +11,7 @@ All of these except Cloud Monitoring are undocumented, so the widget now owns th
 
 ## Consequences
 
-- Claude access tokens last about 8 hours. When one has expired the widget refreshes it and writes the new tokens back to the Login folder (atomically), as codexbar did, because refreshing in memory only would rotate the refresh token and sign Claude Code out.
+- Claude access tokens last about 8 hours. When one has expired the widget refreshes it and writes the new tokens back to the Login folder (atomically), as codexbar did, because refreshing in memory only would rotate the refresh token and sign Claude Code out. It re-reads the file first and uses a token Claude Code has already refreshed, but it cannot prevent Claude Code and the widget refreshing with the same refresh token at the same moment; that rare race, which may sign Claude Code out once, is accepted.
 - Codex tokens last about 10 days and are left for Codex to refresh.
 - The Gemini API row needs the Google Cloud SDK signed in; it shows request counts only, since Cloud Monitoring has no cost figure.
 - Accounts no longer share codexbar state files, so every Account is read in parallel.

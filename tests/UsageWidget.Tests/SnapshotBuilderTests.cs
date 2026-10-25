@@ -119,6 +119,23 @@ public class SnapshotBuilderTests
     }
 
     [Fact]
+    public void Antigravity_bucket_title_names_its_own_window()
+    {
+        const string report = """
+        {"status":"SUCCESS","command":{"data":{"groups":[
+          {"name":"Gemini Models","buckets":[{"id":"gemini-weekly","window":"weekly","remaining_fraction":0.5}]},
+          {"name":"Claude and GPT models","buckets":[{"id":"3p-daily","window":"daily","remaining_fraction":0.25}]}]}}}
+        """;
+
+        var row = Fresh(AntigravityReader.Parse("Antigravity", report, Now));
+
+        Assert.Equal(50, row.WeeklyPercent);
+        var extra = Assert.Single(row.Extras);
+        Assert.Equal("Claude/GPT daily", extra.Title);
+        Assert.Equal(75, extra.UsedPercent);
+    }
+
+    [Fact]
     public void Antigravity_answer_without_a_usage_report_is_an_error()
     {
         // What agy prints when "/usage" reaches the model as a prompt instead of running the slash command.
