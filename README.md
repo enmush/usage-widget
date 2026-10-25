@@ -58,6 +58,7 @@ Settings are stored in `%APPDATA%\UsageWidget\settings.json` and can be edited b
 | --- | --- | --- |
 | `refreshMinutes` | `5` | How often every shown Account is read |
 | `showAnnouncements` | `true` | Show announced Codex resets under Codex Rows |
+| `hotkey` | `Ctrl+Alt+Shift+U` | Global shortcut that brings the widget to the front, or minimizes it when it already is; `""` for none. Also set in the ⚙ view |
 | `accounts` | detected | Each Account's `name`, `provider`, optional `env` and `hidden` |
 
 If the file cannot be read, the widget starts with detected Accounts and keeps the broken file as `settings.json.broken`. Startup errors are written to `%APPDATA%\UsageWidget\error.log`.

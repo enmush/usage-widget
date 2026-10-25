@@ -25,6 +25,9 @@ public partial class MainWindow : Window
     bool refreshing;
     bool refreshAgain;
     bool exiting;
+    GlobalHotkey? hotkey;
+    // Why the saved shortcut is not active, such as another app owning it; null when it works.
+    string? hotkeyProblem;
     readonly CancellationTokenSource shutdown = new();
 
     public event Action? ExitRequested;
@@ -41,7 +44,13 @@ public partial class MainWindow : Window
         clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         clockTimer.Tick += (_, _) => Render();
 
-        SourceInitialized += (_, _) => NativeWindow.AddMinimizeBox(this);
+        SourceInitialized += (_, _) =>
+        {
+            NativeWindow.AddMinimizeBox(this);
+            hotkey = new GlobalHotkey(this);
+            hotkey.Pressed += ToggleFromHotkey;
+            ApplyHotkey();
+        };
 
         // With a taskbar button to bring the widget back, closing it (Alt+F4) exits the app.
         Closing += (_, e) =>
@@ -150,6 +159,18 @@ public partial class MainWindow : Window
 
     void OnMinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
+    /// <summary>The shortcut brings the widget to the front, or minimizes it when it already is in front.</summary>
+    void ToggleFromHotkey()
+    {
+        if (WindowState != WindowState.Minimized && IsActive)
+        {
+            WindowState = WindowState.Minimized;
+            return;
+        }
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+    }
+
     void PlaceWindow()
     {
         var area = SystemParameters.WorkArea;
@@ -201,6 +222,7 @@ public partial class MainWindow : Window
         exiting = true;
         refreshTimer.Stop();
         clockTimer.Stop();
+        hotkey?.Dispose();
         shutdown.Cancel();
         ExitRequested?.Invoke();
     }

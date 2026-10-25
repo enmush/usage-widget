@@ -8,6 +8,13 @@ public sealed class WidgetSettings
 {
     public int RefreshMinutes { get; set; } = 5;
     public bool ShowAnnouncements { get; set; } = true;
+    /// <summary>
+    /// Global shortcut that shows or hides the widget, such as "Ctrl+F1"; empty for none. The default uses all three
+    /// modifiers, which browsers, editors and agent apps leave free, unlike Ctrl+Shift+U (Edge's Read aloud).
+    /// </summary>
+    public string Hotkey { get; set; } = DefaultHotkey;
+
+    public const string DefaultHotkey = "Ctrl+Alt+Shift+U";
     public List<AccountSettings> Accounts { get; set; } = [];
     public double? Left { get; set; }
     public double? Top { get; set; }
@@ -28,6 +35,8 @@ public sealed class WidgetSettings
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        // The file is meant for hand-editing, so "Ctrl+F1" stays readable instead of "Ctrl+F1".
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
     public static string DefaultPath =>

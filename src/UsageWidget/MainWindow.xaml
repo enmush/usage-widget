@@ -349,6 +349,24 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Show/hide shortcut -->
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="86" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Shortcut" Style="{StaticResource Caption}" />
+                    <TextBox x:Name="HotkeyBox" Grid.Column="1" Style="{StaticResource Field}" IsReadOnly="True"
+                             IsReadOnlyCaretVisible="False" PreviewKeyDown="OnHotkeyKeyDown"
+                             GotKeyboardFocus="OnHotkeyFocus" LostKeyboardFocus="OnHotkeyBlur"
+                             AutomationProperties.Name="Show or hide shortcut" />
+                    <Button Grid.Column="2" Style="{StaticResource FlatButton}" Content="Clear" Margin="4,0,0,0"
+                            Click="OnClearHotkeyClick" />
+                </Grid>
+                <TextBlock x:Name="HotkeyHelp" Margin="86,2,0,0" FontSize="10.5" TextWrapping="Wrap"
+                           Foreground="{StaticResource TextSecondary}" />
+
                 <!-- Footer -->
                 <Grid Margin="0,8,0,0">
                     <StackPanel Orientation="Horizontal">

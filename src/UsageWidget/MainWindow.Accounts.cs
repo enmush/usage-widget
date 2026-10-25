@@ -24,6 +24,7 @@ public partial class MainWindow
             ? "No sign-ins found on this PC. Sign in with claude, codex or agy and press Detect logins, or add an Account below."
             : "Unchecked Accounts stay saved but get no Row.";
         AccountsHint.Text = (note is null ? "" : note + " ") + hint;
+        RenderHotkey();
     }
 
     void ChangeAccounts(List<AccountSettings> accounts, string? note = null)
