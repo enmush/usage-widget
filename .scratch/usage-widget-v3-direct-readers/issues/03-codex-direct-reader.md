@@ -4,9 +4,9 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Windows are mapped by length (about 5 hours → session, about 7 days → weekly)
-- [ ] Ticket count is the available credits; expiry is the earliest `expires_at`
-- [ ] Expired or missing sign-in gives a stale Row saying to sign in to Codex again
-- [ ] Parsing tested from captured, scrubbed fixtures
+- [x] Windows are mapped by length (about 5 hours → session, about 7 days → weekly)
+- [x] Ticket count is the available credits; expiry is the earliest `expires_at`
+- [x] Expired or missing sign-in gives a stale Row saying to sign in to Codex again
+- [x] Parsing tested from captured, scrubbed fixtures

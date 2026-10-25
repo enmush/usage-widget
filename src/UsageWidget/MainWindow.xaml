@@ -199,7 +199,9 @@
                                                    Visibility="{Binding StaleVisibility}" />
                                     </StackPanel>
 
-                                    <Grid Grid.Column="1">
+                                    <TextBlock Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding ApiText}" VerticalAlignment="Center"
+                                               Visibility="{Binding ApiVisibility}" FontSize="11.5" />
+                                    <Grid Grid.Column="1" Visibility="{Binding BarsVisibility}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -214,7 +216,7 @@
                                         <TextBlock Grid.Column="1" Text="{Binding SessionText}" Style="{StaticResource Pct}" />
                                     </Grid>
 
-                                    <Grid Grid.Column="3">
+                                    <Grid Grid.Column="3" Visibility="{Binding BarsVisibility}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -297,6 +299,8 @@
                                          Checked="OnProviderChanged" />
                             <RadioButton Style="{StaticResource Pill}" Content="Antigravity" Tag="antigravity" GroupName="provider"
                                          Checked="OnProviderChanged" />
+                            <RadioButton Style="{StaticResource Pill}" Content="Gemini API" Tag="gemini-api" GroupName="provider"
+                                         Checked="OnProviderChanged" />
                         </StackPanel>
                         <Grid Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
@@ -312,9 +316,9 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Login folder" Style="{StaticResource Caption}" />
+                            <TextBlock x:Name="FolderLabel" Text="Login folder" Style="{StaticResource Caption}" />
                             <TextBox x:Name="FolderBox" Grid.Column="1" Style="{StaticResource Field}" AutomationProperties.Name="Login folder" />
-                            <Button Grid.Column="2" Style="{StaticResource FlatButton}" Content="Browse…" Margin="4,0,0,0"
+                            <Button x:Name="BrowseButton" Grid.Column="2" Style="{StaticResource FlatButton}" Content="Browse…" Margin="4,0,0,0"
                                     Click="OnBrowseClick" />
                         </Grid>
                         <TextBlock x:Name="FolderHelp" Margin="86,-2,0,6" FontSize="10.5" TextWrapping="Wrap"

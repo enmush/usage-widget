@@ -194,7 +194,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>Stops timers and any running codexbar reads (their process trees are killed), then exits.</summary>
+    /// <summary>Stops timers and any running reads (CLI process trees are killed), then exits.</summary>
     public void RequestExit()
     {
         if (exiting) return;

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using UsageWidget.Core;
 
@@ -7,8 +8,6 @@ namespace UsageWidget;
 // The Accounts view: show/hide, remove, add and detect. Every change is saved at once.
 public partial class MainWindow
 {
-    const string ConsentHint = "Claude Accounts need: codexbar-cli config claude-code-credentials allow";
-
     void ShowAccounts()
     {
         UsageView.Visibility = Visibility.Collapsed;
@@ -22,9 +21,9 @@ public partial class MainWindow
     {
         AccountsList.ItemsSource = settings.Accounts.Select((a, i) => AccountItem.From(a, i, home)).ToList();
         var hint = settings.Accounts.Count == 0
-            ? "No sign-ins found on this PC. Sign in with claude, codex or agy and press Detect logins, or add an Account below. "
-            : "Unchecked Accounts stay saved but get no Row. ";
-        AccountsHint.Text = (note is null ? "" : note + " ") + hint + ConsentHint;
+            ? "No sign-ins found on this PC. Sign in with claude, codex or agy and press Detect logins, or add an Account below."
+            : "Unchecked Accounts stay saved but get no Row.";
+        AccountsHint.Text = (note is null ? "" : note + " ") + hint;
     }
 
     void ChangeAccounts(List<AccountSettings> accounts, string? note = null)
@@ -65,9 +64,21 @@ public partial class MainWindow
         ChangeAccounts(accounts);
     }
 
-    void OnDetectClick(object sender, RoutedEventArgs e)
+    async void OnDetectClick(object sender, RoutedEventArgs e)
     {
-        var merged = LoginDetector.Merge(settings.Accounts, WidgetSettings.DetectAccounts(), home);
+        // Looking up the Gemini API key's project runs gcloud, which takes a few seconds.
+        var button = (Button)sender;
+        button.IsEnabled = false;
+        List<AccountSettings> detected;
+        try
+        {
+            detected = await Task.Run(WidgetSettings.DetectAccounts);
+        }
+        finally
+        {
+            button.IsEnabled = true;
+        }
+        var merged = LoginDetector.Merge(settings.Accounts, detected, home);
         var added = merged.Count - settings.Accounts.Count;
         ChangeAccounts(merged, added == 0 ? "No new sign-ins found." : $"Added {added} Account{(added == 1 ? "" : "s")}.");
     }
@@ -108,10 +119,16 @@ public partial class MainWindow
     void UpdateFolderRow()
     {
         var provider = SelectedProvider;
-        FolderRow.IsEnabled = provider.LoginFolderVariable is not null;
+        var isProject = provider.ProjectVariable is not null;
+        FolderRow.IsEnabled = provider.LoginFolderVariable is not null || isProject;
         // The flat field and button styles have no disabled look of their own.
         FolderRow.Opacity = FolderRow.IsEnabled ? 1 : 0.4;
-        FolderHelp.Text = provider.LoginFolderVariable is { } variable
+        FolderLabel.Text = isProject ? "Project" : "Login folder";
+        AutomationProperties.SetName(FolderBox, FolderLabel.Text);
+        BrowseButton.Visibility = isProject ? Visibility.Collapsed : Visibility.Visible;
+        FolderHelp.Text = isProject
+            ? "The Google Cloud project id the API key belongs to. Needs the Google Cloud SDK signed in (gcloud auth login)."
+            : provider.LoginFolderVariable is { } variable
             ? $"Empty means ~\\{provider.DefaultFolderName}. A second sign-in lives in its own folder: run the CLI with {variable} set to it."
             : $"{provider.DisplayName} uses its own CLI sign-in; no folder needed.";
     }

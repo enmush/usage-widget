@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Claude Row values match what codexbar showed for the same Account (session, weekly, nearest reset, plan, scoped hover windows)
-- [ ] A missing or unreadable credentials file gives a stale Row with a cause, not a crash
-- [ ] Parsing is a pure function tested from a captured, scrubbed fixture
-- [ ] Accounts of all Providers are read in parallel; existing stale-Row tests pass
+- [x] Claude Row values match what codexbar showed for the same Account (session, weekly, nearest reset, plan, scoped hover windows)
+- [x] A missing or unreadable credentials file gives a stale Row with a cause, not a crash
+- [x] Parsing is a pure function tested from a captured, scrubbed fixture
+- [x] Accounts of all Providers are read in parallel; existing stale-Row tests pass

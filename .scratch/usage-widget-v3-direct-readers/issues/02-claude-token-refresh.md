@@ -4,9 +4,9 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Expired token (or a 401) triggers one refresh; new access token, refresh token and expiry are written back atomically with every other field kept
-- [ ] A token already refreshed by Claude Code since the last read is used without calling the token endpoint
-- [ ] Refresh failure gives a stale Row saying to sign in to Claude Code again
-- [ ] Covered by tests with a fake HTTP handler and a temp Login folder
+- [x] Expired token (or a 401) triggers one refresh; new access token, refresh token and expiry are written back atomically with every other field kept
+- [x] A token already refreshed by Claude Code since the last read is used without calling the token endpoint
+- [x] Refresh failure gives a stale Row saying to sign in to Claude Code again
+- [x] Covered by tests with a fake HTTP handler and a temp Login folder

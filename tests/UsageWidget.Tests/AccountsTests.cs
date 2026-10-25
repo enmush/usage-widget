@@ -237,4 +237,47 @@ public sealed class AccountsTests : IDisposable
         Assert.Equal(["Codex"], loaded.VisibleAccounts.Select(a => a.Name));
         Assert.True(loaded.Accounts[1].Hidden);
     }
+
+    [Fact]
+    public void Gemini_api_account_keeps_its_project_and_has_no_login_folder()
+    {
+        var (account, error) = AccountCatalog.Create("Gemini API", "gemini-api", " jun-personal ", home);
+
+        Assert.Null(error);
+        Assert.Equal("jun-personal", AccountCatalog.Project(account!));
+        Assert.Null(AccountCatalog.LoginFolder(account!, home));
+    }
+
+    [Fact]
+    public void Gemini_api_account_needs_a_project()
+    {
+        var (account, error) = AccountCatalog.Create("Gemini API", "gemini-api", "  ", home);
+
+        Assert.Null(account);
+        Assert.Equal("Enter a Google Cloud project id.", error);
+    }
+
+    [Fact]
+    public void Same_gemini_api_project_is_one_sign_in_but_another_project_is_not()
+    {
+        var existing = new List<AccountSettings> { AccountCatalog.Create("Gemini API", "gemini-api", "jun-personal", home).Account! };
+
+        var (same, error) = AccountCatalog.Create("Other name", "gemini-api", "JUN-PERSONAL", home, existing);
+        var (other, _) = AccountCatalog.Create("Work", "gemini-api", "work-project", home, existing);
+
+        Assert.Null(same);
+        Assert.Equal("That sign-in is already listed as Gemini API.", error);
+        Assert.NotNull(other);
+    }
+
+    [Fact]
+    public void Detector_adds_the_gemini_api_project_once()
+    {
+        var found = LoginDetector.Detect(home, agyFound: false, geminiApiProject: "jun-personal");
+        var merged = LoginDetector.Merge(found, LoginDetector.Detect(home, agyFound: false, geminiApiProject: "jun-personal"), home);
+
+        var account = Assert.Single(merged);
+        Assert.Equal("Gemini API", account.Name);
+        Assert.Equal("jun-personal", AccountCatalog.Project(account));
+    }
 }

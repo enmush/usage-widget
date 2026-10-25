@@ -8,7 +8,7 @@ A small sticky-note Windows widget (WPF, .NET 10; a normal desktop window with a
 - Test: `dotnet test tests/UsageWidget.Tests`
 - Run: `dotnet run --project src/UsageWidget`
 - Release packages: `powershell -File tools/publish.ps1` (tests, then both zips and `SHA256SUMS.txt` in `artifacts/release`)
-- Requires Win-CodexBar installed (`codexbar-cli.exe` under `%LOCALAPPDATA%\Programs\CodexBar`); see ADR 0001.
+- Reads each provider directly (ADR 0003); the Gemini API Row needs the Google Cloud SDK signed in. Never pass `/usage` to agy through Git Bash: it rewrites the argument into a path and agy sends it to the model.
 
 ## Agent skills
 

@@ -13,6 +13,9 @@ public static class SystemPath
         return Environment.ExpandEnvironmentVariables(machine + ";" + user);
     }
 
-    public static bool Contains(string fileName) =>
-        Current().Split(';', StringSplitOptions.RemoveEmptyEntries).Any(dir => File.Exists(Path.Combine(dir, fileName)));
+    /// <summary>The full path of the first PATH folder holding the file, or null.</summary>
+    public static string? Find(string fileName) =>
+        Current().Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(dir => Path.Combine(dir.Trim(), fileName))
+            .FirstOrDefault(File.Exists);
 }

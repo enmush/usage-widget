@@ -2,14 +2,15 @@ using System.Diagnostics;
 
 namespace UsageWidget.Core;
 
-/// <summary>Runs codexbar-cli once per Account (ADR 0001).</summary>
-public sealed class UsageReader(string codexbarPath, TimeSpan timeout)
-{
-    public async Task<UsageRead> ReadAsync(AccountSettings account, CancellationToken ct)
-    {
-        var exe = Environment.ExpandEnvironmentVariables(codexbarPath);
-        if (!File.Exists(exe)) return UsageRead.Failure($"codexbar-cli not found: {exe}");
+/// <summary>Output of one CLI run, or why it produced none.</summary>
+public sealed record CliResult(string? Output, string? Error);
 
+/// <summary>Runs a Provider's own CLI (agy, gcloud) and kills its whole process tree on timeout or cancel.</summary>
+public sealed class CliRunner(TimeSpan timeout)
+{
+    /// <param name="workingDirectory">Null runs in the widget's own folder.</param>
+    public async Task<CliResult> RunAsync(string exe, IEnumerable<string> args, string? workingDirectory, CancellationToken ct)
+    {
         var psi = new ProcessStartInfo(exe)
         {
             RedirectStandardOutput = true,
@@ -17,12 +18,9 @@ public sealed class UsageReader(string codexbarPath, TimeSpan timeout)
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        foreach (var arg in new[] { "usage", "-p", account.Provider, "--json", "--no-color" })
-            psi.ArgumentList.Add(arg);
-
+        foreach (var arg in args) psi.ArgumentList.Add(arg);
+        if (workingDirectory is not null) psi.WorkingDirectory = workingDirectory;
         psi.Environment["PATH"] = SystemPath.Current();
-        foreach (var (key, value) in account.Env ?? [])
-            psi.Environment[key] = Environment.ExpandEnvironmentVariables(value);
 
         using var process = new Process { StartInfo = psi };
         try
@@ -31,7 +29,7 @@ public sealed class UsageReader(string codexbarPath, TimeSpan timeout)
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            return UsageRead.Failure($"Could not start codexbar-cli: {e.Message}");
+            return new(null, $"Could not start {Path.GetFileName(exe)}: {e.Message}");
         }
 
         var stdout = process.StandardOutput.ReadToEndAsync(ct);
@@ -46,14 +44,14 @@ public sealed class UsageReader(string codexbarPath, TimeSpan timeout)
         }
         catch (OperationCanceledException)
         {
-            return UsageRead.Failure(ct.IsCancellationRequested ? "Cancelled" : $"Timed out after {timeout.TotalSeconds:0}s");
+            return new(null, ct.IsCancellationRequested ? "Cancelled" : $"Timed out after {timeout.TotalSeconds:0}s");
         }
 
         var output = await stdout;
-        _ = await stderr;
-        return string.IsNullOrWhiteSpace(output)
-            ? UsageRead.Failure($"codexbar-cli exited with code {process.ExitCode} and no output")
-            : UsageRead.Success(output);
+        var error = await stderr;
+        if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output)) return new(output, null);
+        var reason = error.Trim().Split('\n').LastOrDefault(l => !string.IsNullOrWhiteSpace(l))?.Trim();
+        return new(null, $"{Path.GetFileName(exe)} exited with code {process.ExitCode}" + (reason is null ? "" : $": {reason}"));
     }
 
     static void KillTree(Process process)

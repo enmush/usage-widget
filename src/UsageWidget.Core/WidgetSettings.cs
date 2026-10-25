@@ -6,7 +6,6 @@ namespace UsageWidget.Core;
 /// <summary>Hand-editable settings, stored as JSON in the user's AppData.</summary>
 public sealed class WidgetSettings
 {
-    public string CodexbarPath { get; set; } = @"%LOCALAPPDATA%\Programs\CodexBar\codexbar-cli.exe";
     public int RefreshMinutes { get; set; } = 5;
     public bool ShowAnnouncements { get; set; } = true;
     public List<AccountSettings> Accounts { get; set; } = [];
@@ -17,8 +16,12 @@ public sealed class WidgetSettings
     public IEnumerable<AccountSettings> VisibleAccounts => Accounts.Where(a => !a.Hidden);
 
     /// <summary>The Accounts signed in on this PC, used on first run and by "Detect logins".</summary>
-    public static List<AccountSettings> DetectAccounts() =>
-        LoginDetector.Detect(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), LoginDetector.AgyInstalled());
+    /// Runs on the thread pool, so the gcloud lookup never blocks on a UI thread's synchronization context.
+    public static List<AccountSettings> DetectAccounts() => Task.Run(async () =>
+        LoginDetector.Detect(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            LoginDetector.AgyPath() is not null,
+            await LoginDetector.GeminiApiProjectAsync(CancellationToken.None))).GetAwaiter().GetResult();
 
     static readonly JsonSerializerOptions Json = new()
     {

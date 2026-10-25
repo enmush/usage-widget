@@ -16,7 +16,7 @@ sealed class AccountItem
         Index = index,
         Name = account.Name,
         ProviderName = AccountCatalog.Find(account.Provider)?.DisplayName ?? account.Provider,
-        FolderText = AccountCatalog.DisplayFolder(AccountCatalog.LoginFolder(account, home), home),
+        FolderText = AccountCatalog.Project(account) ?? AccountCatalog.DisplayFolder(AccountCatalog.LoginFolder(account, home), home),
         Shown = !account.Hidden,
     };
 }

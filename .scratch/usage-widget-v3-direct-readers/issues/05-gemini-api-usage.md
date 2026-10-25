@@ -4,10 +4,10 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Row shows "N today · M this month" for the project, matching a manual Cloud Monitoring query
-- [ ] Missing or signed-out gcloud gives a stale Row naming the cause
-- [ ] Add form takes a project id for this Provider; detection adds the key's project once
-- [ ] A Row with API usage and no Windows counts as having data for the stale logic
-- [ ] Catalog, detection and parsing covered by tests
+- [x] Row shows "N today · M this month" for the project, matching a manual Cloud Monitoring query
+- [x] Missing or signed-out gcloud gives a stale Row naming the cause
+- [x] Add form takes a project id for this Provider; detection adds the key's project once
+- [x] A Row with API usage and no Windows counts as having data for the stale logic
+- [x] Catalog, detection and parsing covered by tests

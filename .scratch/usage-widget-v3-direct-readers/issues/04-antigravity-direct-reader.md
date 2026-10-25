@@ -4,9 +4,9 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Gemini weekly bucket is the weekly Window labelled "Gemini Weekly"; other weekly buckets are hover windows titled by group
-- [ ] Used percent is one minus the remaining fraction
-- [ ] Missing agy, timeout or a non-success report gives a stale Row with a cause; the process tree is killed on timeout or exit
-- [ ] Parsing tested from a captured fixture
+- [x] Gemini weekly bucket is the weekly Window labelled "Gemini Weekly"; other weekly buckets are hover windows titled by group
+- [x] Used percent is one minus the remaining fraction
+- [x] Missing agy, timeout or a non-success report gives a stale Row with a cause; the process tree is killed on timeout or exit
+- [x] Parsing tested from a captured fixture

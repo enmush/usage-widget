@@ -16,6 +16,9 @@ sealed class RowView
     public required string WeeklyText { get; init; }
     public required double WeeklyFraction { get; init; }
     public required Brush WeeklyBrush { get; init; }
+    public required Visibility BarsVisibility { get; init; }
+    public required string ApiText { get; init; }
+    public required Visibility ApiVisibility { get; init; }
     public required string ResetText { get; init; }
     public required string TicketText { get; init; }
     public required Visibility TicketVisibility { get; init; }
@@ -43,6 +46,10 @@ sealed class RowView
             WeeklyText = Percent(row.WeeklyPercent),
             WeeklyFraction = Fraction(row.WeeklyPercent),
             WeeklyBrush = BandBrush(row.WeeklyPercent),
+            // An API usage Row has no Windows; its request counts take the place of both bars.
+            BarsVisibility = row.Api is null ? Visibility.Visible : Visibility.Collapsed,
+            ApiText = row.Api is { } api ? $"{api.Today:N0} today · {api.ThisMonth:N0} this month" : "",
+            ApiVisibility = row.Api is null ? Visibility.Collapsed : Visibility.Visible,
             ResetText = row.NearestReset is { } at ? "↻ " + Formatter.Countdown(at, now) : hasData ? "" : "—",
             TicketText = row.TicketCount > 0
                 ? $"{row.TicketCount}" + (row.TicketExpiry is { } exp ? " · " + Formatter.ShortDate(exp, zone) : "")
@@ -80,6 +87,8 @@ sealed class RowView
             sb.Append($"\n{row.WeeklyLabel}: {w:0}%").Append(At("resets", row.WeeklyResetsAt));
         foreach (var extra in row.Extras)
             sb.Append($"\n{extra.Title}: {extra.UsedPercent:0}%").Append(At("resets", extra.ResetsAt));
+        if (row.Api is { } api)
+            sb.Append($"\nAPI requests: {api.Today:N0} today, {api.ThisMonth:N0} this month");
         if (row.TicketCount > 0)
             sb.Append($"\nReset tickets: {row.TicketCount}").Append(At("nearest expiry", row.TicketExpiry));
         if (row.Error is { } err)

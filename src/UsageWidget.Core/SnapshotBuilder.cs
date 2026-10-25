@@ -1,116 +1,52 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace UsageWidget.Core;
 
-/// <summary>
-/// Turns codexbar-cli JSON and the codex-resets feed into Rows. Parsing is lenient:
-/// unexpected shapes become an error on the Row instead of an exception.
-/// </summary>
-public static partial class SnapshotBuilder
-{
-    const string ResetTicketWindowId = "reset-credits";
+/// <summary>One Window as a Provider reports it.</summary>
+public sealed record UsageWindow(double Percent, DateTimeOffset? ResetsAt);
 
+/// <summary>
+/// Turns Provider reads and the codex-resets feed into Rows. A failed read keeps the last Row as stale
+/// instead of blanking it (ADR 0003).
+/// </summary>
+public static class SnapshotBuilder
+{
     public static Row BuildRow(AccountSettings account, UsageRead read, Row? previous, DateTimeOffset now)
     {
-        var error = read.Error;
-        Row? fresh = null;
-        if (error is null)
-        {
-            try
-            {
-                fresh = ParseRow(account.Name, read.Json ?? "", now, out error);
-            }
-            catch (Exception)
-            {
-                // ADR 0001: any surprise in codexbar output marks the Account stale instead of crashing.
-                error = "Unreadable usage output";
-            }
-        }
-
-        if (fresh is not null) return fresh;
+        if (read.Row is { } fresh) return fresh with { Name = account.Name };
+        var error = read.Error ?? "No usage data";
         if (previous is { HasData: true })
             return previous with { IsStale = true, Error = error };
         return Row.Empty(account.Name, error);
     }
 
-    static Row? ParseRow(string name, string json, DateTimeOffset now, out string? error)
+    /// <summary>A fresh Row from parsed Windows; the nearest reset is the earliest future one of session and weekly.</summary>
+    public static Row Compose(
+        string name, UsageWindow? session, UsageWindow? weekly, DateTimeOffset now,
+        string weeklyLabel = "Weekly", int tickets = 0, DateTimeOffset? ticketExpiry = null,
+        string? plan = null, IReadOnlyList<ExtraWindow>? extras = null)
     {
-        error = null;
-        using var doc = JsonDocument.Parse(json);
-        if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.GetArrayLength() == 0)
-        {
-            error = "No usage data";
-            return null;
-        }
-
-        var entry = doc.RootElement[0];
-        if (entry.ValueKind != JsonValueKind.Object)
-        {
-            error = "No usage data";
-            return null;
-        }
-        if (Str(entry, "error") is { } reported)
-        {
-            error = reported;
-            return null;
-        }
-        if (!entry.TryGetProperty("usage", out var usage) || usage.ValueKind != JsonValueKind.Object)
-        {
-            error = "No usage data";
-            return null;
-        }
-
-        var session = Window(usage, "primary");
-        var weekly = Window(usage, "secondary");
-        if (weekly is null && session is null)
-        {
-            error = "No usage windows";
-            return null;
-        }
-
-        int tickets = 0;
-        DateTimeOffset? ticketExpiry = null;
-        var extras = new List<ExtraWindow>();
-        if (usage.TryGetProperty("extra_rate_windows", out var extraList) && extraList.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in extraList.EnumerateArray())
-            {
-                if (item.ValueKind != JsonValueKind.Object) continue;
-                var w = item.TryGetProperty("window", out var we) && we.ValueKind == JsonValueKind.Object ? we : default;
-                if (w.ValueKind != JsonValueKind.Object) continue;
-                if (Str(item, "id") == ResetTicketWindowId)
-                {
-                    tickets = TicketCount(Str(w, "reset_description"));
-                    ticketExpiry = Time(w, "resets_at");
-                    continue;
-                }
-                extras.Add(new ExtraWindow(Str(item, "title") ?? Str(item, "id") ?? "Extra", Num(w, "used_percent") ?? 0, Time(w, "resets_at")));
-            }
-        }
-
-        var sessionPercent = session is { Informational: false } ? session.Percent : null;
-        var weeklyPercent = weekly is { Informational: false } ? weekly.Percent : null;
-        var nearest = new[] { session, weekly }
-            .Where(w => w is { Informational: false, ResetsAt: not null } && w.ResetsAt > now)
-            .Select(w => w!.ResetsAt)
-            .Min();
-
+        var nearest = new[] { session?.ResetsAt, weekly?.ResetsAt }.Where(t => t > now).Min();
         return new Row(
-            name,
-            sessionPercent,
-            session?.Informational == false ? session.ResetsAt : null,
-            weeklyPercent,
-            weekly?.ResetsAt,
-            Str(usage, "secondary_label") ?? "Weekly",
-            nearest,
-            tickets,
-            ticketExpiry,
-            Str(usage, "login_method"),
-            extras,
-            Time(usage, "updated_at") ?? now,
-            false,
-            null);
+            name, session?.Percent, session?.ResetsAt, weekly?.Percent, weekly?.ResetsAt, weeklyLabel,
+            nearest, tickets, ticketExpiry, plan, extras ?? [], now, false, null);
+    }
+
+    /// <summary>
+    /// Runs a Provider parser; any surprise in its output becomes a failure instead of an exception,
+    /// because these endpoints are undocumented and change without notice.
+    /// </summary>
+    public static UsageRead Parse(string json, Func<JsonElement, UsageRead> parse)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return parse(doc.RootElement);
+        }
+        catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException or KeyNotFoundException or IndexOutOfRangeException)
+        {
+            return UsageRead.Failure("Unreadable usage output");
+        }
     }
 
     public static AnnouncedReset? ParseAnnouncement(string? json)
@@ -126,44 +62,46 @@ public static partial class SnapshotBuilder
                 || s.ValueKind != JsonValueKind.Object)
                 return null;
 
-            var scheduled = Time(s, "scheduled_for");
-            var announced = Time(s, "announced_at");
+            var scheduled = JsonRead.Time(s, "scheduled_for");
+            var announced = JsonRead.Time(s, "announced_at");
             if (scheduled is null && announced is null) return null;
-            return new AnnouncedReset(scheduled, announced, Str(s, "text") ?? "");
+            return new AnnouncedReset(scheduled, announced, JsonRead.Str(s, "text") ?? "");
         }
         catch (Exception)
         {
             return null;
         }
     }
+}
 
-    sealed record WindowValue(double? Percent, DateTimeOffset? ResetsAt, bool Informational);
+/// <summary>Lenient JSON lookups: a missing or wrongly typed value is null, never an exception.</summary>
+static class JsonRead
+{
+    public static JsonElement? Obj(JsonElement e, string name) =>
+        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Object ? v : null;
 
-    static WindowValue? Window(JsonElement usage, string name)
-    {
-        if (!usage.TryGetProperty(name, out var w) || w.ValueKind != JsonValueKind.Object) return null;
-        var percent = Num(w, "used_percent");
-        if (percent is null) return null;
-        var informational = w.TryGetProperty("is_informational", out var i) && i.ValueKind == JsonValueKind.True;
-        return new WindowValue(percent, Time(w, "resets_at"), informational);
-    }
+    public static IEnumerable<JsonElement> Array(JsonElement e, string name) =>
+        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Array
+            ? v.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object).ToList()
+            : [];
 
-    static int TicketCount(string? description)
-    {
-        if (description is null) return 1;
-        var m = LeadingNumber().Match(description);
-        return m.Success && int.TryParse(m.Value, out var count) ? count : 1;
-    }
+    public static string? Str(JsonElement e, string name) =>
+        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
-    static string? Str(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+    public static double? Num(JsonElement e, string name) =>
+        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : null;
 
-    static double? Num(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : null;
+    /// <summary>A number, or a number written as a string (Cloud Monitoring writes int64 values as strings).</summary>
+    public static long? Long(JsonElement e, string name) =>
+        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v)
+            ? v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var n) ? n
+            : v.ValueKind == JsonValueKind.String && long.TryParse(v.GetString(), out var s) ? s
+            : null
+            : null;
 
-    static DateTimeOffset? Time(JsonElement e, string name) =>
-        Str(e, name) is { } s && DateTimeOffset.TryParse(s, out var t) ? t : null;
+    public static DateTimeOffset? Time(JsonElement e, string name) =>
+        Str(e, name) is { } s && DateTimeOffset.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, out var t) ? t : null;
 
-    [GeneratedRegex(@"\d+")]
-    private static partial Regex LeadingNumber();
+    public static DateTimeOffset? UnixTime(JsonElement e, string name) =>
+        Num(e, name) is { } s && s is > 0 and < 32503680000 ? DateTimeOffset.FromUnixTimeSeconds((long)s) : null;
 }

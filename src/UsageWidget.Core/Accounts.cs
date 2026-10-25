@@ -1,7 +1,10 @@
 namespace UsageWidget.Core;
 
-/// <summary>A Provider the widget can read, and where its own tool keeps a sign-in.</summary>
-public sealed record Provider(string Id, string DisplayName, string? LoginFolderVariable, string? DefaultFolderName);
+/// <summary>
+/// A Provider the widget can read, and where its own tool keeps a sign-in; an API Provider names a cloud project instead.
+/// </summary>
+public sealed record Provider(
+    string Id, string DisplayName, string? LoginFolderVariable, string? DefaultFolderName, string? ProjectVariable = null);
 
 /// <summary>Builds and describes Accounts. A Login folder is stored as the Provider's own environment override.</summary>
 public static class AccountCatalog
@@ -11,6 +14,7 @@ public static class AccountCatalog
         new("claude", "Claude", "CLAUDE_CONFIG_DIR", ".claude"),
         new("codex", "Codex", "CODEX_HOME", ".codex"),
         new("antigravity", "Antigravity", null, null),
+        new("gemini-api", "Gemini API", null, null, "GOOGLE_CLOUD_PROJECT"),
     ];
 
     public static Provider? Find(string id) =>
@@ -27,6 +31,13 @@ public static class AccountCatalog
             ? Normalize(folder)
             : Path.Combine(home, defaultName);
     }
+
+    /// <summary>The Google Cloud project of an API Provider's Account, or null.</summary>
+    public static string? Project(AccountSettings account) =>
+        Find(account.Provider) is { ProjectVariable: { } variable } && account.Env is not null
+        && account.Env.TryGetValue(variable, out var project) && !string.IsNullOrWhiteSpace(project)
+            ? project.Trim()
+            : null;
 
     /// <summary>A Login folder for display, with the home folder shown as "~".</summary>
     public static string DisplayFolder(string? folder, string home)
@@ -54,6 +65,10 @@ public static class AccountCatalog
     {
         if (string.IsNullOrWhiteSpace(name)) return (null, "Enter a name.");
         if (Find(providerId) is not { } provider) return (null, "Unknown provider.");
+        if (provider.ProjectVariable is { } projectVariable)
+            return string.IsNullOrWhiteSpace(folder)
+                ? (null, "Enter a Google Cloud project id.")
+                : (new AccountSettings(name.Trim(), provider.Id, new() { [projectVariable] = folder.Trim() }), null);
         if (provider.LoginFolderVariable is null || string.IsNullOrWhiteSpace(folder))
             return (new AccountSettings(name.Trim(), provider.Id), null);
 
@@ -66,7 +81,8 @@ public static class AccountCatalog
 
     /// <summary>Same Provider and same Login folder: the same sign-in, whatever the Accounts are called.</summary>
     public static bool SameLogin(AccountSettings a, AccountSettings b, string home) =>
-        Is(a, b.Provider) && SamePath(LoginFolder(a, home), LoginFolder(b, home));
+        Is(a, b.Provider) && SamePath(LoginFolder(a, home), LoginFolder(b, home))
+        && string.Equals(Project(a), Project(b), StringComparison.OrdinalIgnoreCase);
 
     public static bool SameName(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
@@ -83,13 +99,16 @@ public static class LoginDetector
     // The file each Provider's tool writes into a Login folder once signed in.
     static readonly Dictionary<string, string> SignInMarker = new() { ["claude"] = ".credentials.json", ["codex"] = "auth.json" };
 
-    public static List<AccountSettings> Detect(string home, bool agyFound)
+    /// <param name="geminiApiProject">The Google Cloud project of this PC's Gemini API key, if one was found.</param>
+    public static List<AccountSettings> Detect(string home, bool agyFound, string? geminiApiProject = null)
     {
         var found = new List<AccountSettings>();
         // Claude Code keeps working from its default folder even when the token sits elsewhere, so that one counts as is.
         AddFolders(found, home, AccountCatalog.Find("claude")!, defaultNeedsMarker: false);
         AddFolders(found, home, AccountCatalog.Find("codex")!, defaultNeedsMarker: true);
         if (agyFound) found.Add(new AccountSettings("Antigravity", "antigravity"));
+        if (geminiApiProject is not null)
+            found.Add(new AccountSettings("Gemini API", "gemini-api", new() { ["GOOGLE_CLOUD_PROJECT"] = geminiApiProject }));
         return found;
     }
 
@@ -107,16 +126,39 @@ public static class LoginDetector
         return merged;
     }
 
-    /// <summary>Whether Antigravity's agy CLI is installed (on PATH, in its winget package folder, or its own bin folder).</summary>
-    public static bool AgyInstalled()
+    /// <summary>Antigravity's agy CLI (on PATH, in its own bin folder, or in its winget package folder), or null.</summary>
+    public static string? AgyPath()
     {
-        if (SystemPath.Contains("agy.exe")) return true;
+        var onPath = SystemPath.Find("agy.exe");
+        if (onPath is not null) return onPath;
 
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var own = Path.Combine(localAppData, "agy", "bin", "agy.exe");
+        if (File.Exists(own)) return own;
         var packages = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
-        return File.Exists(Path.Combine(localAppData, "agy", "bin", "agy.exe"))
-            || (Directory.Exists(packages) && Directory.EnumerateDirectories(packages, "Google.AntigravityCLI*")
-                .Any(dir => File.Exists(Path.Combine(dir, "agy.exe"))));
+        return Directory.Exists(packages)
+            ? Directory.EnumerateDirectories(packages, "Google.AntigravityCLI*").Select(dir => Path.Combine(dir, "agy.exe")).FirstOrDefault(File.Exists)
+            : null;
+    }
+
+    /// <summary>The Google Cloud SDK's gcloud, or null.</summary>
+    public static string? GcloudPath() => SystemPath.Find("gcloud.cmd");
+
+    /// <summary>
+    /// The project that owns the GEMINI_API_KEY set on this PC, looked up through gcloud; null when there is
+    /// no key, no gcloud or no access.
+    /// </summary>
+    public static async Task<string?> GeminiApiProjectAsync(CancellationToken ct)
+    {
+        var key = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        if (string.IsNullOrWhiteSpace(key) || GcloudPath() is not { } gcloud) return null;
+
+        var runner = new CliRunner(TimeSpan.FromSeconds(30));
+        var parent = await runner.RunAsync(gcloud, ["services", "api-keys", "lookup", key, "--format=value(parent)"], null, ct);
+        // "projects/<number>/locations/global"
+        if (parent.Output?.Trim().Split('/') is not ["projects", var number, ..]) return null;
+        var id = await runner.RunAsync(gcloud, ["projects", "describe", number, "--format=value(projectId)"], null, ct);
+        return id.Output?.Trim() is { Length: > 0 } projectId ? projectId : number;
     }
 
     static void AddFolders(List<AccountSettings> found, string home, Provider provider, bool defaultNeedsMarker)

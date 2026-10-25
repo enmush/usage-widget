@@ -4,32 +4,23 @@ namespace UsageWidget.Core;
 public sealed class UsageService(WidgetSettings settings, HttpClient http)
 {
     const string AnnouncementUrl = "https://codex-resets.com/api/v1/status";
+    static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(120);
 
-    readonly UsageReader reader = new(settings.CodexbarPath, TimeSpan.FromSeconds(120));
+    readonly ClaudeReader claude = new(http, Home, () => DateTimeOffset.Now);
+    readonly CodexReader codex = new(http, Home, () => DateTimeOffset.Now);
+    readonly AntigravityReader antigravity = new(new CliRunner(ReadTimeout), LoginDetector.AgyPath, () => DateTimeOffset.Now);
+    readonly GeminiApiReader geminiApi = new(
+        http, new CliRunner(TimeSpan.FromSeconds(30)), LoginDetector.GcloudPath, () => DateTimeOffset.Now, TimeZoneInfo.Local);
+
+    static string Home => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
     /// <param name="previous">Last Rows, matched by Account name so a failed read can keep them as stale.</param>
     public async Task<(IReadOnlyList<Row> Rows, AnnouncedReset? Announcement)> RefreshAsync(
         IReadOnlyList<AccountSettings> accounts, IReadOnlyList<Row> previous, CancellationToken ct)
     {
         var announcement = settings.ShowAnnouncements ? FetchAnnouncementAsync(ct) : Task.FromResult<AnnouncedReset?>(null);
-
-        // Accounts of the same provider share codexbar state files, so they run one after another;
-        // different providers run in parallel (ADR 0001).
-        var reads = new UsageRead[accounts.Count];
-        await Task.WhenAll(Enumerable.Range(0, accounts.Count).GroupBy(i => accounts[i].Provider).Select(async group =>
-        {
-            foreach (var i in group)
-            {
-                try
-                {
-                    reads[i] = await reader.ReadAsync(accounts[i], ct);
-                }
-                catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
-                {
-                    reads[i] = UsageRead.Failure(e.Message);
-                }
-            }
-        }));
+        // Each Account has its own sign-in, so all of them are read at once (ADR 0003).
+        var reads = await Task.WhenAll(accounts.Select(account => ReadAsync(account, ct)));
 
         var now = DateTimeOffset.Now;
         var rows = accounts
@@ -37,6 +28,31 @@ public sealed class UsageService(WidgetSettings settings, HttpClient http)
                 account, reads[i], previous.FirstOrDefault(p => p.Name == account.Name), now))
             .ToList();
         return (rows, await announcement);
+    }
+
+    async Task<UsageRead> ReadAsync(AccountSettings account, CancellationToken ct)
+    {
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        limit.CancelAfter(ReadTimeout);
+        try
+        {
+            return account.Provider.ToLowerInvariant() switch
+            {
+                "claude" => await claude.ReadAsync(account, limit.Token),
+                "codex" => await codex.ReadAsync(account, limit.Token),
+                "antigravity" => await antigravity.ReadAsync(account, limit.Token),
+                "gemini-api" => await geminiApi.ReadAsync(account, limit.Token),
+                _ => UsageRead.Failure($"Unknown provider: {account.Provider}"),
+            };
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return UsageRead.Failure($"Timed out after {ReadTimeout.TotalSeconds:0}s");
+        }
+        catch (HttpRequestException e)
+        {
+            return UsageRead.Failure("Network error: " + e.Message);
+        }
     }
 
     async Task<AnnouncedReset?> FetchAnnouncementAsync(CancellationToken ct)
