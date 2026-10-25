@@ -6,7 +6,7 @@ It sits on the desktop like a sticky note. Other windows can cover it, the **—
 
 ![Usage view](docs/images/usage.png)
 
-Each Row is one Account: the 5-hour and weekly windows (or, for a Gemini API Account, request counts and a **Balance ↗** link that opens AI Studio billing in your browser, since Google shows the prepaid balance only there) (bars turn amber at 70 % and red at 90 %), the time left in the 5-hour window (above its bar), the time to the weekly reset, and reset tickets with the nearest expiry. Hover a Row for details. A `!` means the last read failed; the Row then keeps its last known values, dimmed.
+Each Row is one Account: the 5-hour and weekly windows (or, for a Gemini API Account, request counts and a **Balance ↗** link that opens AI Studio billing in your browser, since Google shows the prepaid balance only there) (bars turn amber at 70 % and red at 90 %), the time left in the 5-hour window (next to its bar; the percentage is in the tooltip), the time to the weekly reset, and reset tickets with the nearest expiry. Hover a Row for details. A `!` means the last read failed; the Row then keeps its last known values, dimmed.
 
 ## Requirements
 
