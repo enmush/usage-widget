@@ -1,5 +1,7 @@
 # Read usage through codexbar-cli instead of calling providers directly
 
+**Superseded by ADR 0003 (2026-10-25):** the widget now reads each provider directly.
+
 The widget gets every account's windows and reset tickets by running Win-CodexBar's `codexbar-cli usage --json` (one run per account, with `CLAUDE_CONFIG_DIR` selecting the Claude account) rather than talking to Anthropic, OpenAI and Google itself. On 2026-10-24 this CLI already handled the hard parts on this PC: Claude OAuth refresh, Codex app-server, and Antigravity through `agy -p /usage`, while direct Gemini CLI access was blocked by Google (UNSUPPORTED_CLIENT). Re-implementing those undocumented, fast-changing endpoints would mean owning their breakage.
 
 ## Consequences

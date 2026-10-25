@@ -5,7 +5,7 @@ A small desktop window, kept like a sticky note, that shows the remaining allowa
 ## Language
 
 **Provider**:
-An AI service whose subscription limits are tracked, such as Claude, Codex or Antigravity.
+An AI service whose usage is tracked, such as Claude, Codex, Antigravity or the Gemini API.
 _Avoid_: Service, vendor, model
 
 **Account**:
@@ -35,6 +35,10 @@ _Avoid_: Reset credit, banked reset, saved reset
 **Announced reset**:
 A provider-wide reset that the provider has announced ahead of time for a specific moment.
 _Avoid_: Scheduled reset, event reset
+
+**API usage**:
+How many requests a pay-as-you-go API project has made today and this month; it has no Window and no Reset.
+_Avoid_: Quota, credits, spend
 
 **Row**:
 The single line in the widget that summarises one account.
