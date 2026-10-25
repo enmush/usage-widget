@@ -69,4 +69,4 @@ The widget reads each Provider itself (ADR 0003): Claude and Codex through the u
 ## Further Notes
 
 - Every endpoint except Cloud Monitoring is undocumented and may change without notice; that is the accepted cost in ADR 0003.
-- Cloud Monitoring API was enabled on `jun-personal` (`gen-lang-client-0045347318`) on 2026-10-25 at the user's request.
+- Cloud Monitoring API was enabled on the user's Gemini API project on 2026-10-25 at the user's request.
