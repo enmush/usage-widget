@@ -65,6 +65,12 @@
             <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
             <Setter Property="FontSize" Value="11" />
         </Style>
+        <!-- A text link to a web page; the trailing arrow icon marks that it opens the browser. -->
+        <Style x:Key="WebLink" TargetType="Button" BasedOn="{StaticResource FlatButton}">
+            <Setter Property="Foreground" Value="{StaticResource BandNormal}" />
+            <Setter Property="Padding" Value="5,1" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
         <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource FlatButton}">
             <Setter Property="Foreground" Value="{StaticResource BandNormal}" />
         </Style>
@@ -233,6 +239,17 @@
 
                                     <TextBlock Grid.Column="4" Text="{Binding ResetText}" HorizontalAlignment="Right"
                                                VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+
+                                    <Button Grid.Column="4" Grid.ColumnSpan="2" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            Style="{StaticResource WebLink}" Visibility="{Binding LinkVisibility}"
+                                            Tag="{Binding LinkUrl}" Click="OnWebLinkClick" ToolTip="{Binding LinkTip}"
+                                            AutomationProperties.Name="{Binding LinkTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding LinkText}" FontSize="11" />
+                                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="9.5"
+                                                       Margin="4,1,0,0" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
 
                                     <Border Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center"
                                             CornerRadius="6" Padding="5,0,5,1" Background="#2EC9A7FF"

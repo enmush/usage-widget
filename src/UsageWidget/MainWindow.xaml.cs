@@ -205,6 +205,19 @@ public partial class MainWindow : Window
         ExitRequested?.Invoke();
     }
 
+    void OnWebLinkClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string url } || !url.StartsWith("https://", StringComparison.Ordinal)) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // No default browser; the tooltip still names the page.
+        }
+    }
+
     void OnMenuOpened(object sender, RoutedEventArgs e) => StartupItem.IsChecked = StartupEntry.IsEnabled;
     void OnRefreshClick(object sender, RoutedEventArgs e) => RequestRefresh();
     void OnStartupClick(object sender, RoutedEventArgs e) => StartupEntry.Set(StartupItem.IsChecked);

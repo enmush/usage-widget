@@ -19,6 +19,10 @@ sealed class RowView
     public required Visibility BarsVisibility { get; init; }
     public required string ApiText { get; init; }
     public required Visibility ApiVisibility { get; init; }
+    public required string LinkText { get; init; }
+    public required string LinkUrl { get; init; }
+    public required string LinkTip { get; init; }
+    public required Visibility LinkVisibility { get; init; }
     public required string ResetText { get; init; }
     public required string TicketText { get; init; }
     public required Visibility TicketVisibility { get; init; }
@@ -50,6 +54,11 @@ sealed class RowView
             BarsVisibility = row.Api is null ? Visibility.Visible : Visibility.Collapsed,
             ApiText = row.Api is { } api ? $"{api.Today:N0} today · {api.ThisMonth:N0} this month" : "",
             ApiVisibility = row.Api is null ? Visibility.Collapsed : Visibility.Visible,
+            // No API reports a prepaid balance; AI Studio's billing page is the only place it is shown.
+            LinkText = row.Api is null ? "" : "Balance",
+            LinkUrl = row.Api is null ? "" : AiStudioBillingUrl,
+            LinkTip = row.Api is null ? "" : "Open AI Studio billing in your browser to see the prepaid balance",
+            LinkVisibility = row.Api is null ? Visibility.Collapsed : Visibility.Visible,
             ResetText = row.NearestReset is { } at ? "↻ " + Formatter.Countdown(at, now) : hasData ? "" : "—",
             TicketText = row.TicketCount > 0
                 ? $"{row.TicketCount}" + (row.TicketExpiry is { } exp ? " · " + Formatter.ShortDate(exp, zone) : "")
@@ -60,6 +69,8 @@ sealed class RowView
             Details = DescribeRow(row, zone),
         };
     }
+
+    const string AiStudioBillingUrl = "https://aistudio.google.com/billing";
 
     static string Percent(double? p) => p is { } v ? $"{v:0}%" : "—";
 
