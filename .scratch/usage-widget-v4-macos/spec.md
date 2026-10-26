@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done (v0.4.0)
 
 # Usage Widget on macOS (v0.4.0)
 
