@@ -36,13 +36,8 @@ public partial class App : Application
 
             window = new MainWindow(settings, settingsPath, new UsageService(settings, http));
             window.ExitRequested += () => desktop.Shutdown();
-            // Quit from the macOS app menu or Dock, or signing out: save and stop reads first.
-            desktop.ShutdownRequested += (_, e) =>
-            {
-                if (window.IsExiting) return;
-                e.Cancel = true;
-                window.RequestExit();
-            };
+            // Quit from the macOS app menu or Dock, or signing out: save and stop reads, then let it go ahead.
+            desktop.ShutdownRequested += (_, _) => window.PrepareExit();
             // Clicking the Dock icon brings back a widget hidden by minimizing.
             if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
                 activatable.Activated += (_, e) =>

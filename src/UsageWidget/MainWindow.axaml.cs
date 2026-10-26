@@ -236,17 +236,24 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>Saves the position, stops timers and any running reads (CLI process trees are killed), then exits.</summary>
+    /// <summary>Saves the position and stops timers and any running reads, then exits.</summary>
     public void RequestExit()
     {
-        if (IsExiting) return;
+        if (!PrepareExit()) return;
+        ExitRequested?.Invoke();
+    }
+
+    /// <summary>Saves the position and stops timers and any running reads (CLI process trees are killed); false if already done.</summary>
+    public bool PrepareExit()
+    {
+        if (IsExiting) return false;
         SavePosition();
         IsExiting = true;
         refreshTimer.Stop();
         clockTimer.Stop();
         platform.Dispose();
         shutdown.Cancel();
-        ExitRequested?.Invoke();
+        return true;
     }
 
     async void OnWebLinkClick(object? sender, RoutedEventArgs e)

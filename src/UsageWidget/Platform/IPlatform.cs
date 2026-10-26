@@ -25,5 +25,12 @@ interface IPlatform : IDisposable
     bool IsMinimized(Window window);
     void Restore(Window window);
 
-    public static IPlatform Current { get; } = OperatingSystem.IsWindows() ? new WindowsPlatform() : new MacPlatform();
+    public static IPlatform Current { get; } = Create();
+
+    static IPlatform Create()
+    {
+        if (OperatingSystem.IsWindows()) return new WindowsPlatform();
+        if (OperatingSystem.IsMacOS()) return new MacPlatform();
+        throw new PlatformNotSupportedException("Usage Widget runs on Windows and macOS.");
+    }
 }

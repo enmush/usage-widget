@@ -76,7 +76,7 @@ sealed class WindowsPlatform : IPlatform
         return 0;
     }
 
-    public string Describe(Hotkey hotkey) => hotkey.ToString();
+    public string Describe(Hotkey hotkey) => hotkey.Describe(mac: false);
 
     public void Minimize(Window window) => window.WindowState = WindowState.Minimized;
 

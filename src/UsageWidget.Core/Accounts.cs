@@ -137,8 +137,8 @@ public static class LoginDetector
     /// <summary>Antigravity's agy CLI (on PATH, in its own bin folder, or in its winget package folder), or null.</summary>
     public static string? AgyPath()
     {
-        var onPath = SystemPath.Find("agy.exe");
-        if (onPath is not null) return onPath;
+        var onPath = SystemPath.Find(OperatingSystem.IsWindows() ? "agy.exe" : "agy");
+        if (onPath is not null || !OperatingSystem.IsWindows()) return onPath;
 
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var own = Path.Combine(localAppData, "agy", "bin", "agy.exe");
@@ -150,7 +150,7 @@ public static class LoginDetector
     }
 
     /// <summary>The Google Cloud SDK's gcloud, or null.</summary>
-    public static string? GcloudPath() => SystemPath.Find("gcloud.cmd");
+    public static string? GcloudPath() => SystemPath.Find(OperatingSystem.IsWindows() ? "gcloud.cmd" : "gcloud");
 
     /// <summary>
     /// The project that owns the GEMINI_API_KEY set on this PC, looked up through gcloud; null when there is
@@ -158,7 +158,8 @@ public static class LoginDetector
     /// </summary>
     public static async Task<string?> GeminiApiProjectAsync(CancellationToken ct)
     {
-        var key = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        // A Mac app opened from Finder does not see keys exported in the shell profile, so the login shell is asked too.
+        var key = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? SystemPath.LoginShellVariable("GEMINI_API_KEY");
         if (string.IsNullOrWhiteSpace(key) || GcloudPath() is not { } gcloud) return null;
 
         var runner = new CliRunner(TimeSpan.FromSeconds(30));

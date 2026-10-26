@@ -18,7 +18,20 @@ swift "$here/macos-window.swift" "$pid" || { echo "No window for pid $pid"; kill
 sleep 5
 screencapture -x "$shot" || echo "Screenshot not allowed on this machine"
 
-osascript -e 'quit app "Usage Widget"'
+# The shortcut hides the widget in front and brings it back; pressing keys needs accessibility access,
+# which a build machine may not grant, so this only reports.
+press() { osascript -e 'tell application "System Events" to keystroke "u" using {control down, option down, shift down}' 2>&1; sleep 2; }
+open "$app"; sleep 2
+if press && ! swift "$here/macos-window.swift" "$pid" >/dev/null 2>&1; then
+    echo "Shortcut hid the window"
+    press
+    swift "$here/macos-window.swift" "$pid" >/dev/null 2>&1 && echo "Shortcut brought the window back" || echo "Shortcut did not bring the window back"
+else
+    echo "Shortcut not checked (no key access, or the window stayed)"
+fi
+open "$app"; sleep 1
+
+osascript -e 'quit app "Usage Widget"' || true
 for _ in $(seq 1 15); do
     kill -0 "$pid" 2>/dev/null || { echo "Quit cleanly"; exit 0; }
     sleep 1
