@@ -1,6 +1,6 @@
 # Usage Widget
 
-A small desktop window, kept like a sticky note, that shows the remaining allowance of every AI subscription account at once.
+A small desktop window for Windows and macOS, kept like a sticky note, that shows the remaining allowance of every AI subscription account at once.
 
 ## Language
 
@@ -13,7 +13,7 @@ One signed-in login at a provider; a provider can have several (for example Clau
 _Avoid_: Profile, user, token account
 
 **Login folder**:
-The folder where a provider's own tool keeps one Account's sign-in, such as `~\.claude-acct2` for a second Claude Account.
+The folder a provider's own tool uses for one Account, such as `~/.claude-acct2` for a second Claude Account; the Account's sign-in is kept in it or under its name in the system's credential store.
 _Avoid_: Profile, config dir, home
 
 **Hidden account**:

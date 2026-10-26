@@ -1,6 +1,6 @@
 # Usage Widget
 
-A small sticky-note Windows widget (WPF, .NET 10; a normal desktop window with a taskbar button) that shows every AI subscription account's usage windows, reset tickets and announced resets in one place. Domain terms are in `GLOSSARY.md`; decisions are in `docs/adr/`.
+A small sticky-note desktop widget for Windows and macOS (Avalonia, .NET 10; a normal window with a taskbar button or Dock icon) that shows every AI subscription account's usage windows, reset tickets and announced resets in one place. Domain terms are in `GLOSSARY.md`; decisions are in `docs/adr/`.
 
 ## Build and run
 

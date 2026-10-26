@@ -1,5 +1,7 @@
-using System.Windows;
-using System.Windows.Input;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
 using UsageWidget.Core;
 
 namespace UsageWidget;
@@ -12,64 +14,65 @@ public partial class MainWindow
     void ApplyHotkey()
     {
         var parsed = Hotkey.Parse(settings.Hotkey);
-        hotkeyProblem = parsed is not null && hotkey?.Set(parsed) == false ? $"{parsed} is already used by another app; pick another." : null;
-        if (parsed is null) hotkey?.Set(null);
+        hotkeyProblem = parsed is not null && !platform.SetHotkey(parsed)
+            ? $"{platform.Describe(parsed)} is already used by another app; pick another."
+            : null;
+        if (parsed is null) platform.SetHotkey(null);
     }
 
     void RenderHotkey(string? note = null)
     {
-        HotkeyBox.Text = Hotkey.Parse(settings.Hotkey)?.ToString() ?? "None";
+        HotkeyBox.Text = Hotkey.Parse(settings.Hotkey) is { } hotkey ? platform.Describe(hotkey) : "None";
         var problem = note ?? hotkeyProblem;
         HotkeyHelp.Text = problem ?? HotkeyHint;
-        HotkeyHelp.Foreground = (System.Windows.Media.Brush)FindResource(problem is null ? "TextSecondary" : "BandWarning");
+        HotkeyHelp.Foreground = (IBrush)this.FindResource(problem is null ? "TextSecondary" : "BandWarning")!;
     }
 
     // While recording, the current shortcut is released so pressing it again reaches the box instead of hiding the widget.
-    void OnHotkeyFocus(object sender, KeyboardFocusChangedEventArgs e)
+    void OnHotkeyFocus(object? sender, FocusChangedEventArgs e)
     {
-        hotkey?.Set(null);
+        platform.SetHotkey(null);
         HotkeyBox.Text = "Press a shortcut…";
     }
 
-    void OnHotkeyBlur(object sender, KeyboardFocusChangedEventArgs e)
+    void OnHotkeyBlur(object? sender, FocusChangedEventArgs e)
     {
         ApplyHotkey();
         RenderHotkey();
     }
 
-    void OnHotkeyKeyDown(object sender, KeyEventArgs e)
+    void OnHotkeyKeyDown(object? sender, KeyEventArgs e)
     {
-        var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        if (key == Key.Tab) return;
+        if (e.Key == Key.Tab) return;
         e.Handled = true;
-        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+        if (e.Key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift
+            or Key.LWin or Key.RWin)
             return;
-        if (key == Key.Escape)
+        if (e.Key == Key.Escape)
         {
-            Keyboard.ClearFocus();
+            Focus();
             return;
         }
 
         var modifiers = HotkeyModifiers.None;
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) modifiers |= HotkeyModifiers.Ctrl;
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) modifiers |= HotkeyModifiers.Alt;
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) modifiers |= HotkeyModifiers.Shift;
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Windows)) modifiers |= HotkeyModifiers.Win;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control)) modifiers |= HotkeyModifiers.Ctrl;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt)) modifiers |= HotkeyModifiers.Alt;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Shift)) modifiers |= HotkeyModifiers.Shift;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Meta)) modifiers |= HotkeyModifiers.Win;
 
-        if (modifiers == HotkeyModifiers.None && key is Key.Back or Key.Delete)
+        if (modifiers == HotkeyModifiers.None && e.Key is Key.Back or Key.Delete)
         {
             SetHotkey(null);
             return;
         }
 
-        var vk = KeyInterop.VirtualKeyFromKey(key);
-        if (Hotkey.KeyName(vk) is null)
+        if (KeyName(e.Key) is not { } name || Hotkey.KeyCode(name) is not { } code)
         {
             RenderHotkey("That key cannot be used; try a letter, digit or F1–F24 with Ctrl, Alt or Shift.");
             HotkeyBox.Text = "Press a shortcut…";
             return;
         }
-        var candidate = new Hotkey(modifiers, vk);
+        var candidate = new Hotkey(modifiers, code);
         if (!candidate.IsUsable)
         {
             RenderHotkey("Add Ctrl, Alt or Shift, so typing that key elsewhere still works.");
@@ -79,7 +82,30 @@ public partial class MainWindow
         SetHotkey(candidate);
     }
 
-    void OnClearHotkeyClick(object sender, RoutedEventArgs e) => SetHotkey(null);
+    /// <summary>The shortcut key name used in settings, or null for a key the widget does not support.</summary>
+    static string? KeyName(Key key) => key switch
+    {
+        >= Key.A and <= Key.Z => key.ToString(),
+        >= Key.D0 and <= Key.D9 => ((int)(key - Key.D0)).ToString(),
+        >= Key.NumPad0 and <= Key.NumPad9 => $"Num{(int)(key - Key.NumPad0)}",
+        >= Key.F1 and <= Key.F24 => $"F{(int)(key - Key.F1) + 1}",
+        Key.Space => "Space",
+        Key.PageUp => "PageUp",
+        Key.PageDown => "PageDown",
+        Key.End => "End",
+        Key.Home => "Home",
+        Key.Left => "Left",
+        Key.Up => "Up",
+        Key.Right => "Right",
+        Key.Down => "Down",
+        Key.Insert => "Insert",
+        Key.Delete => "Delete",
+        Key.Pause => "Pause",
+        Key.OemTilde => "`",
+        _ => null,
+    };
+
+    void OnClearHotkeyClick(object? sender, RoutedEventArgs e) => SetHotkey(null);
 
     void SetHotkey(Hotkey? value)
     {
@@ -88,7 +114,7 @@ public partial class MainWindow
         SaveSettings();
         ApplyHotkey();
         // Leaving the box registers the shortcut; until then it stays released so it can be recorded again.
-        if (HotkeyBox.IsKeyboardFocused) hotkey?.Set(null);
+        if (HotkeyBox.IsFocused) platform.SetHotkey(null);
         RenderHotkey();
     }
 }

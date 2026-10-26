@@ -10,6 +10,8 @@ sealed class AccountItem
     public required string ProviderName { get; init; }
     public required string FolderText { get; init; }
     public required bool Shown { get; init; }
+    public string ShowLabel => $"Show {Name}";
+    public string RemoveLabel => $"Remove {Name}";
 
     public static AccountItem From(AccountSettings account, int index, string home) => new()
     {

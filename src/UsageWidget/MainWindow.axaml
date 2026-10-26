@@ -1,0 +1,202 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:UsageWidget"
+        x:Class="UsageWidget.MainWindow"
+        x:CompileBindings="True"
+        Title="AI usage" Icon="/app.ico"
+        Width="430" SizeToContent="Height" CanResize="False" CanMaximize="False" CanMinimize="True"
+        WindowDecorations="None" ShowInTaskbar="True"
+        Background="Transparent" TransparencyLevelHint="Transparent"
+        FontFamily="Segoe UI Variable Text, Segoe UI, $Default" FontSize="12"
+        Foreground="{StaticResource TextPrimary}">
+
+    <Border Name="Panel" Background="{StaticResource Surface}" BorderBrush="{StaticResource Hairline}" BorderThickness="1"
+            CornerRadius="10" Padding="14,8,8,10">
+        <Border.ContextMenu>
+            <ContextMenu Opening="OnMenuOpening">
+                <MenuItem Header="Refresh now" Click="OnRefreshClick" />
+                <MenuItem Header="Accounts…" Click="OnAccountsClick" />
+                <MenuItem Name="StartupItem" ToggleType="CheckBox" Click="OnStartupClick" />
+                <Separator />
+                <MenuItem Header="Exit" Click="OnExitClick" />
+            </ContextMenu>
+        </Border.ContextMenu>
+
+        <StackPanel>
+            <!-- Header -->
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,4">
+                <TextBlock Name="TitleText" Text="AI usage" FontWeight="SemiBold" FontSize="11"
+                           Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,6,0">
+                    <TextBlock Name="UpdatedText" Classes="caption" />
+                    <Ellipse Name="BusyDot" Width="5" Height="5" Margin="6,0,0,0" Fill="{StaticResource BandNormal}"
+                             VerticalAlignment="Center" Opacity="0" />
+                </StackPanel>
+                <Button Name="GearButton" Grid.Column="2" Classes="flat icon" Content="⚙"
+                        ToolTip.Tip="Accounts" AutomationProperties.Name="Accounts" Click="OnAccountsClick" />
+                <Button Grid.Column="3" Classes="flat icon" Content="—"
+                        ToolTip.Tip="Minimize" AutomationProperties.Name="Minimize" Click="OnMinimizeClick" />
+            </Grid>
+
+            <!-- Usage view -->
+            <StackPanel Name="UsageView" Margin="0,0,6,0">
+                <Grid ColumnDefinitions="86,*,12,*,64,58" Margin="0,0,0,2">
+                    <TextBlock Grid.Column="1" Text="5-hour" Classes="caption" />
+                    <TextBlock Grid.Column="3" Text="weekly" Classes="caption" />
+                    <TextBlock Grid.Column="4" Text="weekly reset" Classes="caption" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Column="5" Text="tickets" Classes="caption" HorizontalAlignment="Right" />
+                </Grid>
+
+                <ItemsControl Name="RowsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:RowView">
+                            <StackPanel>
+                                <Grid ColumnDefinitions="86,*,12,*,64,58" Height="26" Opacity="{Binding Cells.Opacity}"
+                                      ToolTip.Tip="{Binding Cells.Details}" Background="Transparent">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Cells.Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="80" />
+                                        <TextBlock Text=" !" Foreground="{StaticResource BandWarning}" FontWeight="Bold"
+                                                   IsVisible="{Binding Cells.ShowStaleMark}" />
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Cells.ApiText}" VerticalAlignment="Center"
+                                               IsVisible="{Binding Cells.ShowApi}" FontSize="11.5" />
+                                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto" IsVisible="{Binding Cells.ShowBars}">
+                                        <Border Classes="track" Opacity="{Binding SessionBarOpacity}">
+                                            <Border Classes="fill" Background="{Binding SessionBrush}">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform ScaleX="{Binding Cells.SessionFraction}" />
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Cells.SessionText}" Classes="pct" Width="52" />
+                                    </Grid>
+
+                                    <Grid Grid.Column="3" ColumnDefinitions="*,Auto" IsVisible="{Binding Cells.ShowBars}">
+                                        <Border Classes="track">
+                                            <Border Classes="fill" Background="{Binding WeeklyBrush}">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform ScaleX="{Binding Cells.WeeklyFraction}" />
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Cells.WeeklyText}" Classes="pct" />
+                                    </Grid>
+
+                                    <TextBlock Grid.Column="4" Text="{Binding Cells.ResetText}" HorizontalAlignment="Right"
+                                               VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+
+                                    <Button Grid.Column="4" Grid.ColumnSpan="2" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            Classes="flat link" IsVisible="{Binding Cells.ShowLink}"
+                                            Tag="{Binding Cells.LinkUrl}" Click="OnWebLinkClick" ToolTip.Tip="{Binding Cells.LinkTip}"
+                                            AutomationProperties.Name="{Binding Cells.LinkTip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Cells.LinkText}" FontSize="11" />
+                                            <TextBlock Text="↗" FontSize="10.5" Margin="3,0,0,0" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Border Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            CornerRadius="6" Padding="5,0,5,1" Background="{StaticResource TicketBack}"
+                                            IsVisible="{Binding Cells.ShowTickets}">
+                                        <TextBlock Text="{Binding Cells.TicketText}" Foreground="{StaticResource Ticket}" FontSize="10.5" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Text="{Binding Cells.AnnouncementText}" ToolTip.Tip="{Binding Cells.AnnouncementDetails}"
+                                           IsVisible="{Binding Cells.ShowAnnouncement}" Margin="86,-4,0,4"
+                                           Foreground="{StaticResource Ticket}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Name="NoRowsHint" IsVisible="False" Margin="0,6,0,2" TextWrapping="Wrap"
+                           Foreground="{StaticResource TextSecondary}"
+                           Text="No accounts shown. Click the gear to add an account or show a hidden one." />
+            </StackPanel>
+
+            <!-- Accounts view -->
+            <StackPanel Name="AccountsView" IsVisible="False" Margin="0,0,6,0">
+                <ItemsControl Name="AccountsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:AccountItem">
+                            <Grid ColumnDefinitions="26,104,76,*,28" Height="28">
+                                <CheckBox Classes="show" IsChecked="{Binding Shown, Mode=OneTime}"
+                                          Tag="{Binding Index}" IsCheckedChanged="OnShowToggled" ToolTip.Tip="Show this account"
+                                          AutomationProperties.Name="{Binding ShowLabel}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="2" Text="{Binding ProviderName}" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextSecondary}" />
+                                <TextBlock Grid.Column="3" Text="{Binding FolderText}" ToolTip.Tip="{Binding FolderText}"
+                                           VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}"
+                                           TextTrimming="CharacterEllipsis" FontSize="11" />
+                                <Button Grid.Column="4" Classes="flat icon" Content="✕"
+                                        Tag="{Binding Index}" Click="OnRemoveClick" ToolTip.Tip="Remove this account"
+                                        AutomationProperties.Name="{Binding RemoveLabel}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Name="AccountsHint" Margin="0,4,0,4" TextWrapping="Wrap" FontSize="11"
+                           Foreground="{StaticResource TextSecondary}" />
+
+                <!-- Add form -->
+                <Border Name="AddForm" IsVisible="False" Margin="0,6,0,0" Padding="10,8"
+                        CornerRadius="8" Background="{StaticResource Track}">
+                    <StackPanel>
+                        <TextBlock Text="Add account" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <StackPanel Name="ProviderPicker" Orientation="Horizontal" Margin="0,0,0,6">
+                            <RadioButton Name="ProviderClaude" Classes="pill" Content="Claude" Tag="claude" GroupName="provider"
+                                         IsChecked="True" IsCheckedChanged="OnProviderChanged" />
+                            <RadioButton Classes="pill" Content="Codex" Tag="codex" GroupName="provider"
+                                         IsCheckedChanged="OnProviderChanged" />
+                            <RadioButton Classes="pill" Content="Antigravity" Tag="antigravity" GroupName="provider"
+                                         IsCheckedChanged="OnProviderChanged" />
+                            <RadioButton Classes="pill" Content="Gemini API" Tag="gemini-api" GroupName="provider"
+                                         IsCheckedChanged="OnProviderChanged" />
+                        </StackPanel>
+                        <Grid ColumnDefinitions="86,*" Margin="0,0,0,6">
+                            <TextBlock Text="Name" Classes="caption" />
+                            <TextBox Name="NameBox" Grid.Column="1" Classes="field" AutomationProperties.Name="Name" />
+                        </Grid>
+                        <Grid Name="FolderRow" ColumnDefinitions="86,*,Auto" Margin="0,0,0,6">
+                            <TextBlock Name="FolderLabel" Text="Login folder" Classes="caption" />
+                            <TextBox Name="FolderBox" Grid.Column="1" Classes="field" AutomationProperties.Name="Login folder" />
+                            <Button Name="BrowseButton" Grid.Column="2" Classes="flat" Content="Browse…" Margin="4,0,0,0"
+                                    Click="OnBrowseClick" />
+                        </Grid>
+                        <TextBlock Name="FolderHelp" Margin="86,-2,0,6" FontSize="10.5" TextWrapping="Wrap"
+                                   Foreground="{StaticResource TextSecondary}" />
+                        <TextBlock Name="AddError" Foreground="{StaticResource BandDanger}" Margin="0,0,0,6"
+                                   IsVisible="False" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Classes="flat" Content="Cancel" Click="OnCancelAddClick" />
+                            <Button Classes="flat accent" Content="Add" Click="OnConfirmAddClick" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Show/hide shortcut -->
+                <Grid ColumnDefinitions="86,*,Auto" Margin="0,8,0,0">
+                    <TextBlock Text="Shortcut" Classes="caption" />
+                    <TextBox Name="HotkeyBox" Grid.Column="1" Classes="field" IsReadOnly="True"
+                             AutomationProperties.Name="Show or hide shortcut" />
+                    <Button Grid.Column="2" Classes="flat" Content="Clear" Margin="4,0,0,0" Click="OnClearHotkeyClick" />
+                </Grid>
+                <TextBlock Name="HotkeyHelp" Margin="86,2,0,0" FontSize="10.5" TextWrapping="Wrap"
+                           Foreground="{StaticResource TextSecondary}" />
+
+                <!-- Footer -->
+                <Grid Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Name="AddButton" Classes="flat" Content="+ Add account" Click="OnAddClick" />
+                        <Button Classes="flat" Content="Detect logins" Click="OnDetectClick" />
+                    </StackPanel>
+                    <Button HorizontalAlignment="Right" Classes="flat accent" Content="Done" Click="OnDoneClick" />
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

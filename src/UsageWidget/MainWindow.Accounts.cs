@@ -1,6 +1,7 @@
-using System.Windows;
-using System.Windows.Automation;
-using System.Windows.Controls;
+using Avalonia.Automation;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using UsageWidget.Core;
 
 namespace UsageWidget;
@@ -10,8 +11,8 @@ public partial class MainWindow
 {
     void ShowAccounts()
     {
-        UsageView.Visibility = Visibility.Collapsed;
-        AccountsView.Visibility = Visibility.Visible;
+        UsageView.IsVisible = false;
+        AccountsView.IsVisible = true;
         TitleText.Text = "Accounts";
         RenderAccounts();
     }
@@ -21,7 +22,7 @@ public partial class MainWindow
     {
         AccountsList.ItemsSource = settings.Accounts.Select((a, i) => AccountItem.From(a, i, home)).ToList();
         var hint = settings.Accounts.Count == 0
-            ? "No sign-ins found on this PC. Sign in with claude, codex or agy and press Detect logins, or add an Account below."
+            ? "No sign-ins found on this computer. Sign in with claude, codex or agy and press Detect logins, or add an Account below."
             : "Unchecked Accounts stay saved but get no Row.";
         AccountsHint.Text = (note is null ? "" : note + " ") + hint;
         RenderHotkey();
@@ -34,17 +35,16 @@ public partial class MainWindow
         RenderAccounts(note);
     }
 
-    void OnAccountsClick(object sender, RoutedEventArgs e)
+    void OnAccountsClick(object? sender, RoutedEventArgs e)
     {
         if (AccountsView.IsVisible) ShowUsage();
         else ShowAccounts();
     }
 
-    void OnDoneClick(object sender, RoutedEventArgs e) => ShowUsage();
+    void OnDoneClick(object? sender, RoutedEventArgs e) => ShowUsage();
 
-    // Checked/Unchecked rather than Click, so keyboard and UI Automation toggles are saved too.
-    // They also fire when a list item is first bound, which the equality check ignores.
-    void OnShowToggled(object sender, RoutedEventArgs e)
+    // IsCheckedChanged rather than Click, so keyboard and accessibility toggles are saved too.
+    void OnShowToggled(object? sender, RoutedEventArgs e)
     {
         if (sender is not CheckBox { Tag: int index } box || index >= settings.Accounts.Count) return;
         var hidden = box.IsChecked != true;
@@ -54,7 +54,7 @@ public partial class MainWindow
         SaveSettings();
     }
 
-    void OnRemoveClick(object sender, RoutedEventArgs e)
+    void OnRemoveClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: int index } || index >= settings.Accounts.Count) return;
         var accounts = settings.Accounts.ToList();
@@ -65,10 +65,10 @@ public partial class MainWindow
         ChangeAccounts(accounts);
     }
 
-    async void OnDetectClick(object sender, RoutedEventArgs e)
+    async void OnDetectClick(object? sender, RoutedEventArgs e)
     {
         // Looking up the Gemini API key's project runs gcloud, which takes a few seconds.
-        var button = (Button)sender;
+        var button = (Button)sender!;
         button.IsEnabled = false;
         List<AccountSettings> detected;
         try
@@ -86,30 +86,30 @@ public partial class MainWindow
 
     // --- Add form --------------------------------------------------------------------------------
 
-    void OnAddClick(object sender, RoutedEventArgs e)
+    void OnAddClick(object? sender, RoutedEventArgs e)
     {
         NameBox.Text = "";
         FolderBox.Text = "";
-        AddError.Visibility = Visibility.Collapsed;
+        AddError.IsVisible = false;
         ProviderClaude.IsChecked = true;
         UpdateFolderRow();
-        AddForm.Visibility = Visibility.Visible;
+        AddForm.IsVisible = true;
         AddButton.IsEnabled = false;
         NameBox.Focus();
     }
 
-    void OnCancelAddClick(object sender, RoutedEventArgs e) => CloseAddForm();
+    void OnCancelAddClick(object? sender, RoutedEventArgs e) => CloseAddForm();
 
     void CloseAddForm()
     {
-        AddForm.Visibility = Visibility.Collapsed;
+        AddForm.IsVisible = false;
         AddButton.IsEnabled = true;
     }
 
-    void OnProviderChanged(object sender, RoutedEventArgs e)
+    void OnProviderChanged(object? sender, RoutedEventArgs e)
     {
         // Fires while the window is still being built, before the folder controls exist.
-        if (FolderRow is not null) UpdateFolderRow();
+        if (FolderRow is not null && sender is RadioButton { IsChecked: true }) UpdateFolderRow();
     }
 
     // Each pill's Tag is a Provider id from the catalog.
@@ -126,28 +126,32 @@ public partial class MainWindow
         FolderRow.Opacity = FolderRow.IsEnabled ? 1 : 0.4;
         FolderLabel.Text = isProject ? "Project" : "Login folder";
         AutomationProperties.SetName(FolderBox, FolderLabel.Text);
-        BrowseButton.Visibility = isProject ? Visibility.Collapsed : Visibility.Visible;
+        BrowseButton.IsVisible = !isProject;
         FolderHelp.Text = isProject
             ? "The Google Cloud project id the API key belongs to. Needs the Google Cloud SDK signed in (gcloud auth login)."
             : provider.LoginFolderVariable is { } variable
-            ? $"Empty means ~\\{provider.DefaultFolderName}. A second sign-in lives in its own folder: run the CLI with {variable} set to it."
+            ? $"Empty means ~{Path.DirectorySeparatorChar}{provider.DefaultFolderName}. A second sign-in lives in its own folder: run the CLI with {variable} set to it."
             : $"{provider.DisplayName} uses its own CLI sign-in; no folder needed.";
     }
 
-    void OnBrowseClick(object sender, RoutedEventArgs e)
+    async void OnBrowseClick(object? sender, RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Login folder", InitialDirectory = home };
-        if (dialog.ShowDialog(this) == true) FolderBox.Text = dialog.FolderName;
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Login folder",
+            SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(home),
+        });
+        if (folders.FirstOrDefault()?.TryGetLocalPath() is { } path) FolderBox.Text = path;
     }
 
-    void OnConfirmAddClick(object sender, RoutedEventArgs e)
+    void OnConfirmAddClick(object? sender, RoutedEventArgs e)
     {
         var (account, error) = AccountCatalog.Create(
-            NameBox.Text, SelectedProvider.Id, FolderRow.IsEnabled ? FolderBox.Text : null, home, settings.Accounts);
+            NameBox.Text ?? "", SelectedProvider.Id, FolderRow.IsEnabled ? FolderBox.Text : null, home, settings.Accounts);
         if (account is null)
         {
             AddError.Text = error;
-            AddError.Visibility = Visibility.Visible;
+            AddError.IsVisible = true;
             return;
         }
         ChangeAccounts([.. settings.Accounts, account]);

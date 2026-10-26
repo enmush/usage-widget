@@ -1,0 +1,142 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UsageWidget.App"
+             Name="Usage Widget"
+             RequestedThemeVariant="Dark">
+    <Application.Resources>
+        <SolidColorBrush x:Key="Surface" Color="#FF202124" />
+        <SolidColorBrush x:Key="Hairline" Color="#26FFFFFF" />
+        <SolidColorBrush x:Key="TextPrimary" Color="#F2FFFFFF" />
+        <SolidColorBrush x:Key="TextSecondary" Color="#99FFFFFF" />
+        <SolidColorBrush x:Key="Track" Color="#1FFFFFFF" />
+        <SolidColorBrush x:Key="BandNormal" Color="#5CC8FF" />
+        <SolidColorBrush x:Key="BandWarning" Color="#FFC24A" />
+        <SolidColorBrush x:Key="BandDanger" Color="#FF6B6B" />
+        <SolidColorBrush x:Key="Ticket" Color="#C9A7FF" />
+        <SolidColorBrush x:Key="TicketBack" Color="#2EC9A7FF" />
+        <SolidColorBrush x:Key="Hover" Color="#1FFFFFFF" />
+        <SolidColorBrush x:Key="Pressed" Color="#2EFFFFFF" />
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- A bar is a track with a fill scaled from the left edge. -->
+        <Style Selector="Border.track">
+            <Setter Property="Height" Value="4" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Background" Value="{StaticResource Track}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.fill">
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="RenderTransformOrigin" Value="0%,50%" />
+        </Style>
+        <Style Selector="TextBlock.pct">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontFeatures" Value="+tnum" />
+        </Style>
+        <Style Selector="TextBlock.caption">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- Flat buttons: transparent until hovered. -->
+        <Style Selector="Button.flat">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Bg" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.flat:pointerover">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        </Style>
+        <Style Selector="Button.flat:pointerover /template/ Border#Bg">
+            <Setter Property="Background" Value="{StaticResource Hover}" />
+        </Style>
+        <Style Selector="Button.flat:pressed /template/ Border#Bg">
+            <Setter Property="Background" Value="{StaticResource Pressed}" />
+        </Style>
+        <Style Selector="Button.flat:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="Button.icon">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.link">
+            <Setter Property="Foreground" Value="{StaticResource BandNormal}" />
+            <Setter Property="Padding" Value="5,1" />
+        </Style>
+        <Style Selector="Button.accent">
+            <Setter Property="Foreground" Value="{StaticResource BandNormal}" />
+        </Style>
+
+        <!-- A checkbox drawn as a small rounded box with a tick. -->
+        <Style Selector="CheckBox.show">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Box" Width="16" Height="16" CornerRadius="4" BorderThickness="1"
+                            BorderBrush="{StaticResource TextSecondary}" Background="Transparent">
+                        <TextBlock Name="Tick" Text="✓" FontSize="11" FontWeight="Bold" Foreground="#FF202124"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="CheckBox.show:checked /template/ Border#Box">
+            <Setter Property="Background" Value="{StaticResource BandNormal}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BandNormal}" />
+        </Style>
+        <Style Selector="CheckBox.show:checked /template/ TextBlock#Tick">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <!-- Provider picker drawn as segmented pills. -->
+        <Style Selector="RadioButton.pill">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Bg" CornerRadius="10" Padding="10,2" BorderThickness="1"
+                            BorderBrush="{StaticResource Hairline}" Background="Transparent">
+                        <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.pill:checked">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        </Style>
+        <Style Selector="RadioButton.pill:checked /template/ Border#Bg">
+            <Setter Property="Background" Value="{StaticResource Hover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BandNormal}" />
+        </Style>
+
+        <Style Selector="TextBox.field">
+            <Setter Property="Background" Value="{StaticResource Track}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Hairline}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </Application.Styles>
+</Application>

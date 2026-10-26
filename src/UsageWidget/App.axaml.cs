@@ -1,31 +1,31 @@
-﻿using System.IO;
+using System.IO;
 using System.Net.Http;
-using System.Windows;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using UsageWidget.Core;
 
 namespace UsageWidget;
 
 public partial class App : Application
 {
-    Mutex? singleInstance;
     MainWindow? window;
 
-    protected override void OnStartup(StartupEventArgs e)
+    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+
+    public override void OnFrameworkInitializationCompleted()
     {
-        base.OnStartup(e);
+        base.OnFrameworkInitializationCompleted();
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
+
         // A widget that silently disappears is worse than one that skips a frame.
-        DispatcherUnhandledException += (_, args) =>
+        Dispatcher.UIThread.UnhandledException += (_, args) =>
         {
             LogError(args.Exception);
             args.Handled = true;
         };
-
-        singleInstance = new Mutex(true, @"Local\UsageWidget.SingleInstance", out var first);
-        if (!first)
-        {
-            Shutdown();
-            return;
-        }
 
         try
         {
@@ -35,15 +35,28 @@ public partial class App : Application
             http.DefaultRequestHeaders.UserAgent.ParseAdd($"UsageWidget/{typeof(App).Assembly.GetName().Version?.ToString(3)}");
 
             window = new MainWindow(settings, settingsPath, new UsageService(settings, http));
-            window.ExitRequested += ExitApp;
+            window.ExitRequested += () => desktop.Shutdown();
+            // Quit from the macOS app menu or Dock, or signing out: save and stop reads first.
+            desktop.ShutdownRequested += (_, e) =>
+            {
+                if (window.IsExiting) return;
+                e.Cancel = true;
+                window.RequestExit();
+            };
+            // Clicking the Dock icon brings back a widget hidden by minimizing.
+            if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
+                activatable.Activated += (_, e) =>
+                {
+                    if (e.Kind == ActivationKind.Reopen) window.BringBack();
+                };
+            desktop.MainWindow = window;
             window.Show();
         }
         catch (Exception error)
         {
             // Without a window there is nothing to keep running for; leave a trace instead of a ghost process.
             LogError(error);
-            singleInstance.ReleaseMutex();
-            Shutdown(1);
+            desktop.Shutdown(1);
         }
     }
 
@@ -59,12 +72,5 @@ public partial class App : Application
         {
             // Logging is best effort.
         }
-    }
-
-    void ExitApp()
-    {
-        window?.SavePosition();
-        singleInstance?.ReleaseMutex();
-        Shutdown();
     }
 }

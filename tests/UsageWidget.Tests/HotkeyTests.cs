@@ -43,4 +43,18 @@ public class HotkeyTests
         Assert.Equal("", WidgetSettings.Load(path, () => []).Hotkey);
         Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
     }
+
+    [Theory]
+    [InlineData("U", 0x55)]
+    [InlineData("F1", 0x70)]
+    [InlineData("Num0", 0x60)]
+    [InlineData("`", 0xC0)]
+    public void Key_names_map_to_their_key_codes(string name, int code)
+    {
+        Assert.Equal(code, Hotkey.KeyCode(name));
+        Assert.Equal(name, Hotkey.KeyName(code));
+    }
+
+    [Fact]
+    public void Unsupported_key_name_has_no_code() => Assert.Null(Hotkey.KeyCode("Escape"));
 }

@@ -56,6 +56,9 @@ public sealed record Hotkey(HotkeyModifiers Modifiers, int Key)
         return key is { } k && new Hotkey(modifiers, k) is { IsUsable: true } hotkey ? hotkey : null;
     }
 
+    /// <summary>The key code for a key name such as "U", "F1" or "Num0", or null when the widget does not support it.</summary>
+    public static int? KeyCode(string name) => NamedKeys.TryGetValue(name, out var code) ? code : null;
+
     /// <summary>The key's name, or null when the widget does not support it as a shortcut key.</summary>
     public static string? KeyName(int key) => NamedKeys.FirstOrDefault(p => p.Value == key).Key;
 
