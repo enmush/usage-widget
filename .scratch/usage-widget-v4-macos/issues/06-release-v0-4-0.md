@@ -4,10 +4,10 @@
 
 **Blocked by:** 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-- [ ] Version 0.4.0 in the app and both packages
+- [x] Version 0.4.0 in the app and both packages
 - [ ] Tag workflow produces the four zips and `SHA256SUMS.txt` on a draft release
-- [ ] README explains the Mac download, the first open of an unsigned app and the Keychain prompt
-- [ ] Korean release notes describe the current app only
-- [ ] The local Windows build script still produces the two Windows zips
+- [x] README explains the Mac download, the first open of an unsigned app and the Keychain prompt
+- [x] Korean release notes describe the current app only
+- [x] The local Windows build script still produces the two Windows zips

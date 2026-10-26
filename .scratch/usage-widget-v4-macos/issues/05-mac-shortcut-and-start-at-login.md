@@ -4,8 +4,8 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-- [ ] Shortcut text round-trips on both platforms; Mac display uses ⌃ ⌥ ⇧ ⌘; key names map to Carbon key codes, with tests
-- [ ] The shortcut registers through Carbon without an accessibility prompt; a taken shortcut shows the note
-- [ ] Start at login writes and removes the LaunchAgent and the menu shows its state
+- [x] Shortcut text round-trips on both platforms; Mac display uses ⌃ ⌥ ⇧ ⌘; key names map to Carbon key codes, with tests
+- [x] The shortcut registers through Carbon without an accessibility prompt; a taken shortcut shows the note
+- [ ] Start at login writes and removes the LaunchAgent and the menu shows its state (plist unit-tested; menu toggle needs a real Mac)

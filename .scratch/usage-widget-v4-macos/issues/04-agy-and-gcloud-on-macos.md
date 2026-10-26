@@ -4,9 +4,9 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-- [ ] Tool lookup tries the process PATH, the usual install folders, then the login shell once, with tests on the order and fallback
-- [ ] agy and gcloud run with the resolved PATH on macOS; Windows lookup is unchanged
-- [ ] `GEMINI_API_KEY` comes from the process environment or the login shell
-- [ ] The macOS CI smoke run shows the "not found" causes cleanly when the tools are absent
+- [x] Tool lookup tries the process PATH, the usual install folders, then the login shell once, with tests on the order and fallback
+- [x] agy and gcloud run with the resolved PATH on macOS; Windows lookup is unchanged
+- [x] `GEMINI_API_KEY` comes from the process environment or the login shell
+- [ ] The macOS CI smoke run shows the "not found" causes cleanly when the tools are absent (CI has no Accounts, so no Rows; needs a real Mac)

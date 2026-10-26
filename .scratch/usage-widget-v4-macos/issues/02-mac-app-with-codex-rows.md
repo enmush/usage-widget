@@ -6,10 +6,10 @@
 
 **Status:** in-progress
 
-- [ ] Platform services have a macOS implementation chosen at start-up (settings path, single instance, open URL, folder picker, window behaviour)
-- [ ] Settings path is `~/Library/Application Support/UsageWidget/settings.json` on macOS and unchanged on Windows, covered by tests
-- [ ] Codex Rows read on macOS; a missing `auth.json` with Keychain storage gives the stated cause
-- [ ] The workflow builds and tests on both OSes on push and pull request
-- [ ] The macOS job produces arm64 and x64 `.app` zips with the version in Info.plist and an icon, ad-hoc signed
-- [ ] The macOS job starts the packaged app, sees its window and quits it cleanly
-- [ ] Folder help text and displayed paths use `/` on macOS
+- [x] Platform services have a macOS implementation chosen at start-up (settings path, single instance, open URL, folder picker, window behaviour)
+- [x] Settings path is `~/Library/Application Support/UsageWidget/settings.json` on macOS and unchanged on Windows, covered by tests
+- [ ] Codex Rows read on macOS; a missing `auth.json` with Keychain storage gives the stated cause (unit-tested; live check needs a real Mac)
+- [x] The workflow builds and tests on both OSes on push and pull request
+- [x] The macOS job produces arm64 and x64 `.app` zips with the version in Info.plist and an icon, ad-hoc signed
+- [x] The macOS job starts the packaged app, sees its window and quits it cleanly
+- [x] Folder help text and displayed paths use `/` on macOS
