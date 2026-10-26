@@ -13,8 +13,12 @@ public sealed class CodexReader(HttpClient http, string home, Func<DateTimeOffse
 
     public async Task<UsageRead> ReadAsync(AccountSettings account, CancellationToken ct)
     {
-        var path = Path.Combine(AccountCatalog.LoginFolder(account, home)!, "auth.json");
-        if (!File.Exists(path)) return UsageRead.Failure("Not signed in: sign in to Codex with this Login folder");
+        var folder = AccountCatalog.LoginFolder(account, home)!;
+        var path = Path.Combine(folder, "auth.json");
+        if (!File.Exists(path))
+            return UsageRead.Failure(UsesCredentialStore(folder)
+                ? "Codex keeps this sign-in in the system credential store, which the widget cannot read yet"
+                : "Not signed in: sign in to Codex with this Login folder");
 
         string? token, accountId;
         try
@@ -91,5 +95,25 @@ public sealed class CodexReader(HttpClient http, string home, Func<DateTimeOffse
         }
         var count = JsonRead.Obj(usage, "rate_limit_reset_credits") is { } r ? JsonRead.Num(r, "available_count") : null;
         return (count is > 0 and < 1000 ? (int)count : 0, null);
+    }
+
+    /// <summary>
+    /// Codex's config.toml can keep the sign-in in the system credential store instead of auth.json
+    /// ("keyring", or "auto" where a store exists).
+    /// </summary>
+    static bool UsesCredentialStore(string folder)
+    {
+        try
+        {
+            var config = Path.Combine(folder, "config.toml");
+            return File.Exists(config) && File.ReadLines(config)
+                .Select(line => line.Split('#')[0].Split('=', 2))
+                .Any(kv => kv.Length == 2 && kv[0].Trim() == "cli_auth_credentials_store"
+                    && kv[1].Trim().Trim('"', '\'') is "keyring" or "auto");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 }

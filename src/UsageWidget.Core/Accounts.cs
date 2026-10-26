@@ -28,7 +28,7 @@ public static class AccountCatalog
     {
         if (Find(account.Provider) is not { LoginFolderVariable: { } variable, DefaultFolderName: { } defaultName }) return null;
         return account.Env is not null && account.Env.TryGetValue(variable, out var folder) && !string.IsNullOrWhiteSpace(folder)
-            ? Normalize(folder)
+            ? Normalize(folder, home)
             : Path.Combine(home, defaultName);
     }
 
@@ -72,7 +72,7 @@ public static class AccountCatalog
         if (provider.LoginFolderVariable is null || string.IsNullOrWhiteSpace(folder))
             return (new AccountSettings(name.Trim(), provider.Id), null);
 
-        var full = Normalize(folder);
+        var full = Normalize(folder, home);
         if (!Directory.Exists(full)) return (null, "That folder does not exist.");
         if (SamePath(full, Path.Combine(home, provider.DefaultFolderName!)))
             return (new AccountSettings(name.Trim(), provider.Id), null);
@@ -86,8 +86,14 @@ public static class AccountCatalog
 
     public static bool SameName(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
-    static string Normalize(string folder) =>
-        Path.GetFullPath(Environment.ExpandEnvironmentVariables(folder.Trim())).TrimEnd(Path.DirectorySeparatorChar);
+    /// <summary>A full path without a trailing separator; "~" at the start stands for the home folder.</summary>
+    static string Normalize(string folder, string? home = null)
+    {
+        var text = Environment.ExpandEnvironmentVariables(folder.Trim());
+        if (text == "~" || text.StartsWith("~/") || text.StartsWith("~\\"))
+            text = Path.Join(home ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), text[1..].TrimStart('/', '\\'));
+        return Path.GetFullPath(text).TrimEnd(Path.DirectorySeparatorChar);
+    }
 
     static bool SamePath(string? a, string? b) =>
         a is null || b is null ? a == b : string.Equals(Normalize(a), Normalize(b), StringComparison.OrdinalIgnoreCase);

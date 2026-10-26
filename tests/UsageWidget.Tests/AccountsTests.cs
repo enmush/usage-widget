@@ -27,6 +27,16 @@ public sealed class AccountsTests : IDisposable
     }
 
     [Fact]
+    public void Login_folder_typed_with_a_tilde_starts_at_home()
+    {
+        var folder = Folder(".claude-acct2");
+        var (account, error) = AccountCatalog.Create("Claude 2", "claude", "~/.claude-acct2", home);
+
+        Assert.Null(error);
+        Assert.Equal(folder, account!.Env!["CLAUDE_CONFIG_DIR"]);
+    }
+
+    [Fact]
     public void Other_claude_folder_maps_to_CLAUDE_CONFIG_DIR()
     {
         var dir = Folder(".claude-acct2");

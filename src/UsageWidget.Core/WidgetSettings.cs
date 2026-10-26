@@ -39,8 +39,14 @@ public sealed class WidgetSettings
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    public static string DefaultPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "UsageWidget", "settings.json");
+    public static string DefaultPath => Path.Combine(
+        Folder(OperatingSystem.IsMacOS(), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)),
+        "settings.json");
+
+    /// <summary>The widget's own folder: Application Support on macOS, roaming AppData on Windows.</summary>
+    public static string Folder(bool isMac, string home, string appData) =>
+        isMac ? Path.Combine(home, "Library", "Application Support", "UsageWidget") : Path.Combine(appData, "UsageWidget");
 
     /// <summary>The copy a broken settings file is kept as, since the next save replaces the original.</summary>
     public static string BrokenCopyPath(string path) => path + ".broken";

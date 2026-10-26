@@ -1,4 +1,4 @@
-# Builds the release packages into artifacts/release:
+# Builds the Windows release packages into artifacts/release (tools/package-macos.sh builds the Mac ones):
 #   UsageWidget-<version>-win-x64.zip             framework-dependent (needs the .NET 10 Desktop Runtime)
 #   UsageWidget-<version>-win-x64-standalone.zip  self-contained (no runtime needed, larger)
 # plus SHA256SUMS.txt. Run from anywhere: powershell -File tools/publish.ps1
@@ -19,13 +19,14 @@ if ($LASTEXITCODE -ne 0) { throw 'Tests failed; no release built.' }
 # Single-file compression is only allowed for self-contained builds.
 $builds = @(
     @{ Name = "UsageWidget-$version-win-x64"; Args = @('--self-contained', 'false') },
-    @{ Name = "UsageWidget-$version-win-x64-standalone"; Args = @('--self-contained', 'true',
-        '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:EnableCompressionInSingleFile=true') }
+    @{ Name = "UsageWidget-$version-win-x64-standalone"; Args = @('--self-contained', 'true', '-p:EnableCompressionInSingleFile=true') }
 )
 foreach ($build in $builds) {
     $dir = Join-Path $out $build.Name
-    & $dotnet publish $project -c Release -r win-x64 @($build.Args) -p:PublishSingleFile=true -p:DebugType=none -o $dir
+    & $dotnet publish $project -c Release -r win-x64 @($build.Args) -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o $dir
     if ($LASTEXITCODE -ne 0) { throw "Publish failed: $($build.Name)" }
+    # DebugType=none does not cover the native libraries' own symbol files.
+    Get-ChildItem $dir -Filter *.pdb | Remove-Item
     Copy-Item (Join-Path $root 'README.md'), (Join-Path $root 'LICENSE') $dir
     Compress-Archive -Path (Join-Path $dir '*') -DestinationPath "$dir.zip" -Force
 }
