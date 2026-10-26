@@ -5,28 +5,38 @@ namespace UsageWidget.Core;
 /// <summary>
 /// The folders a Provider's CLI is looked up in and run with. On Windows that is the PATH as the registry holds it
 /// now, since a widget started before an installer changed PATH (for example Antigravity's agy) would not see the
-/// change. On macOS an app opened from Finder gets a minimal PATH, so the login shell's PATH and the usual install
-/// folders are added.
+/// change. On macOS an app opened from Finder gets a minimal PATH, so the usual install folders are added, and the
+/// login shell's PATH once a tool is not found in them.
 /// </summary>
 public static class SystemPath
 {
     const string Marker = "__UW__";
     static readonly Lazy<string?> ShellPath = new(() => FromLoginShell("$PATH"));
 
+    static string Home => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
     public static string Current() => OperatingSystem.IsWindows()
         ? Environment.ExpandEnvironmentVariables(
             (Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? "") + ";"
             + (Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? ""))
         : string.Join(Path.PathSeparator, MacFolders(
-            Environment.GetEnvironmentVariable("PATH"), ShellPath.Value, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
+            Environment.GetEnvironmentVariable("PATH"), ShellPath.IsValueCreated ? ShellPath.Value : null, Home));
 
     /// <summary>The full path of the first folder holding the file, or null.</summary>
-    public static string? Find(string fileName) =>
-        Current().Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+    public static string? Find(string fileName) => OperatingSystem.IsWindows()
+        ? Current().Split(';', StringSplitOptions.RemoveEmptyEntries)
             .Select(dir => Path.Combine(dir.Trim(), fileName))
-            .FirstOrDefault(File.Exists);
+            .FirstOrDefault(File.Exists)
+        : FindOnMac(fileName, Environment.GetEnvironmentVariable("PATH"), Home, () => ShellPath.Value, File.Exists);
 
-    /// <summary>The app's own PATH, then the login shell's, then where agy and the Google Cloud SDK usually install.</summary>
+    /// <summary>Looks in the app's PATH and the usual folders first; the login shell is asked only when that fails.</summary>
+    public static string? FindOnMac(string fileName, string? processPath, string home, Func<string?> shellPath, Func<string, bool> exists)
+    {
+        string? In(IEnumerable<string> folders) => folders.Select(dir => $"{dir}/{fileName}").FirstOrDefault(exists);
+        return In(MacFolders(processPath, null, home)) ?? In(MacFolders(processPath, shellPath(), home));
+    }
+
+    /// <summary>The app's own PATH, then where agy and the Google Cloud SDK usually install, then the login shell's PATH.</summary>
     public static List<string> MacFolders(string? processPath, string? shellPath, string home)
     {
         string[] usual =
@@ -34,15 +44,18 @@ public static class SystemPath
             $"{home}/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", $"{home}/google-cloud-sdk/bin",
             "/opt/homebrew/share/google-cloud-sdk/bin", "/usr/local/share/google-cloud-sdk/bin",
         ];
-        return (processPath ?? "").Split(':').Concat((shellPath ?? "").Split(':')).Concat(usual)
+        return (processPath ?? "").Split(':').Concat(usual).Concat((shellPath ?? "").Split(':'))
             .Where(dir => dir.Length > 0)
             .Distinct()
             .ToList();
     }
 
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string?> ShellVariables = new();
+
     /// <summary>An environment variable as the user's login shell sets it, such as a key exported in ~/.zshrc; null if unknown.</summary>
-    public static string? LoginShellVariable(string name) =>
-        OperatingSystem.IsWindows() ? null : FromLoginShell("$" + name) is { Length: > 0 } value ? value : null;
+    public static string? LoginShellVariable(string name) => OperatingSystem.IsWindows()
+        ? null
+        : ShellVariables.GetOrAdd(name, n => FromLoginShell("$" + n) is { Length: > 0 } value ? value : null);
 
     /// <summary>The text a shell printed between two markers, so profile greetings around it are ignored.</summary>
     public static string? BetweenMarkers(string output)
@@ -69,6 +82,8 @@ public static class SystemPath
             using var process = Process.Start(psi)!;
             process.StandardInput.Close();
             var output = process.StandardOutput.ReadToEndAsync();
+            // Drained so a chatty profile cannot fill the pipe and stall the shell.
+            _ = process.StandardError.ReadToEndAsync();
             if (!process.WaitForExit(TimeSpan.FromSeconds(10)))
             {
                 process.Kill(entireProcessTree: true);

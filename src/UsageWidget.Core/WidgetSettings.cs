@@ -22,7 +22,7 @@ public sealed class WidgetSettings
     [JsonIgnore]
     public IEnumerable<AccountSettings> VisibleAccounts => Accounts.Where(a => !a.Hidden);
 
-    /// <summary>The Accounts signed in on this PC, used on first run and by "Detect logins".</summary>
+    /// <summary>The Accounts signed in on this computer, used on first run and by "Detect logins".</summary>
     /// The Gemini API lookup runs gcloud for a few seconds, so the first run skips it and only "Detect logins" does it.
     public static List<AccountSettings> DetectAccounts(bool includeGeminiApi = false) => Task.Run(async () =>
     {

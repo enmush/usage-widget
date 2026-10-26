@@ -35,6 +35,9 @@ sealed unsafe class MacPlatform : IPlatform
     static extern int UnregisterEventHotKey(nint hotKey);
 
     [DllImport(Carbon)]
+    static extern int RemoveEventHandler(nint handlerRef);
+
+    [DllImport(Carbon)]
     static extern int InstallEventHandler(
         nint target, delegate* unmanaged<nint, nint, nint, int> handler, nuint typeCount, EventTypeSpec* types, nint userData, out nint handlerRef);
 
@@ -64,10 +67,13 @@ sealed unsafe class MacPlatform : IPlatform
 
     public void Attach(Window window)
     {
+        if (handlerRef != 0) return;
         current = this;
         var pressed = new EventTypeSpec { EventClass = KeyboardEventClass, EventKind = HotKeyPressedKind };
         InstallEventHandler(GetEventDispatcherTarget(), &OnHotKey, 1, &pressed, 0, out handlerRef);
     }
+
+    public bool Supports(Hotkey hotkey) => hotkey.MacKeyCode is not null;
 
     public bool SetHotkey(Hotkey? hotkey)
     {
@@ -98,5 +104,10 @@ sealed unsafe class MacPlatform : IPlatform
         window.Activate();
     }
 
-    public void Dispose() => SetHotkey(null);
+    public void Dispose()
+    {
+        SetHotkey(null);
+        if (handlerRef != 0) RemoveEventHandler(handlerRef);
+        handlerRef = 0;
+    }
 }

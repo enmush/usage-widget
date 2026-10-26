@@ -9,13 +9,14 @@ namespace UsageWidget;
 // The show/hide shortcut: registering it, and recording a new one in the Accounts view.
 public partial class MainWindow
 {
-    const string HotkeyHint = "Click the box and press a new shortcut. It brings the widget to the front, or minimizes it when it is already in front.";
+    const string HotkeyHint = "Click the box and press a new shortcut. It brings the widget to the front, or hides it when it is already in front.";
 
     void ApplyHotkey()
     {
         var parsed = Hotkey.Parse(settings.Hotkey);
-        hotkeyProblem = parsed is not null && !platform.SetHotkey(parsed)
-            ? $"{platform.Describe(parsed)} is already used by another app; pick another."
+        hotkeyProblem = parsed is null ? null
+            : !platform.Supports(parsed) ? $"{platform.Describe(parsed)} cannot be used on this computer; pick another."
+            : !platform.SetHotkey(parsed) ? $"{platform.Describe(parsed)} is already used by another app; pick another."
             : null;
         if (parsed is null) platform.SetHotkey(null);
     }
@@ -73,6 +74,12 @@ public partial class MainWindow
             return;
         }
         var candidate = new Hotkey(modifiers, code);
+        if (!platform.Supports(candidate))
+        {
+            RenderHotkey("That key cannot be used on this computer; try a letter, digit or F1–F20.");
+            HotkeyBox.Text = "Press a shortcut…";
+            return;
+        }
         if (!candidate.IsUsable)
         {
             RenderHotkey("Add Ctrl, Alt or Shift, so typing that key elsewhere still works.");

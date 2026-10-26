@@ -100,6 +100,17 @@ public sealed class KeychainSignInStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Write_that_reports_success_but_leaves_the_item_unchanged_is_a_failure()
+    {
+        security.Items["Claude Code-credentials"] = ("claude-code-user", Json);
+        security.DropWritesSilently = true;
+        var store = Store();
+        await store.LoadAsync(Default, CancellationToken.None);
+
+        Assert.False(await store.SaveAsync(Default, """{"claudeAiOauth":{"accessToken":"b"}}""", CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Has_sign_in_is_true_for_an_item_or_a_file()
     {
         var acct2 = new ClaudeLogin(Path.Combine(home, ".claude-acct2"), HasOverride: true);
@@ -116,6 +127,8 @@ public sealed class KeychainSignInStoreTests : IDisposable
         public List<(string Service, string Account, string Json)> Writes { get; } = [];
         public List<string> Arguments { get; } = [];
         public bool RefuseWrites { get; set; }
+        // Like security -i, which can end with exit code 0 although a command inside it failed.
+        public bool DropWritesSilently { get; set; }
 
         public Task<CliResult> RunAsync(string exe, IEnumerable<string> args, string? workingDirectory, CancellationToken ct, string? input = null)
         {
@@ -133,7 +146,9 @@ public sealed class KeychainSignInStoreTests : IDisposable
                 if (RefuseWrites) return Task.FromResult(new CliResult(null, "write refused", 1));
                 var parts = System.Text.RegularExpressions.Regex.Match(input, "add-generic-password -U -a \"(.*)\" -s \"(.*)\" -X ([0-9a-f]+)");
                 var json = System.Text.Encoding.UTF8.GetString(Convert.FromHexString(parts.Groups[3].Value));
+                if (DropWritesSilently) return Task.FromResult(new CliResult("", null, 0));
                 Writes.Add((parts.Groups[2].Value, parts.Groups[1].Value, json));
+                Items[parts.Groups[2].Value] = (parts.Groups[1].Value, json);
                 return Task.FromResult(new CliResult("", null, 0));
             }
             return Task.FromResult(new CliResult(null, "unexpected", 1));

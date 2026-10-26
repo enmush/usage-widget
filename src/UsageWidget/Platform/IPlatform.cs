@@ -14,6 +14,9 @@ interface IPlatform : IDisposable
     /// <summary>Call once the window is open; the shortcut works only after this.</summary>
     void Attach(Window window);
 
+    /// <summary>Whether this computer's keyboard has the shortcut's key.</summary>
+    bool Supports(Hotkey hotkey);
+
     /// <summary>Replaces the current shortcut; false when another app already owns this one.</summary>
     bool SetHotkey(Hotkey? hotkey);
     event Action? HotkeyPressed;

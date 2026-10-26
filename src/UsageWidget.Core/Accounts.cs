@@ -99,13 +99,13 @@ public static class AccountCatalog
         a is null || b is null ? a == b : string.Equals(Normalize(a), Normalize(b), StringComparison.OrdinalIgnoreCase);
 }
 
-/// <summary>Finds the Accounts already signed in on this PC.</summary>
+/// <summary>Finds the Accounts already signed in on this computer.</summary>
 public static class LoginDetector
 {
     // The file each Provider's tool writes into a Login folder once signed in.
     static readonly Dictionary<string, string> SignInMarker = new() { ["claude"] = ".credentials.json", ["codex"] = "auth.json" };
 
-    /// <param name="geminiApiProject">The Google Cloud project of this PC's Gemini API key, if one was found.</param>
+    /// <param name="geminiApiProject">The Google Cloud project of this computer's Gemini API key, if one was found.</param>
     /// <param name="claudeSignedIn">Whether a Claude Login folder has a sign-in where its file is not (the macOS Keychain).</param>
     public static List<AccountSettings> Detect(
         string home, bool agyFound, string? geminiApiProject = null, Func<ClaudeLogin, bool>? claudeSignedIn = null)
@@ -153,7 +153,7 @@ public static class LoginDetector
     public static string? GcloudPath() => SystemPath.Find(OperatingSystem.IsWindows() ? "gcloud.cmd" : "gcloud");
 
     /// <summary>
-    /// The project that owns the GEMINI_API_KEY set on this PC, looked up through gcloud; null when there is
+    /// The project that owns the GEMINI_API_KEY set on this computer, looked up through gcloud; null when there is
     /// no key, no gcloud or no access.
     /// </summary>
     public static async Task<string?> GeminiApiProjectAsync(CancellationToken ct)

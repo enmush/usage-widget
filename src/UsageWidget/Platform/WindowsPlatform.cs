@@ -51,11 +51,14 @@ sealed class WindowsPlatform : IPlatform
 
     public void Attach(Window window)
     {
+        if (handle != 0) return;
         // A borderless window lacks the minimize style, so its taskbar button would only restore it, never minimize.
         Win32Properties.AddWindowStylesCallback(window, (style, exStyle) => (style | WsMinimizeBox, exStyle));
         Win32Properties.AddWndProcHookCallback(window, OnMessage);
         handle = window.TryGetPlatformHandle()?.Handle ?? 0;
     }
+
+    public bool Supports(Hotkey hotkey) => true;
 
     public bool SetHotkey(Hotkey? hotkey)
     {

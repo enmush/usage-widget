@@ -34,6 +34,8 @@ public partial class MainWindow : Window
     PixelPoint? dragStart;
     PixelPoint windowStart;
     bool dragged;
+    // Opened fires again each time a hidden window is shown; the setup below runs once.
+    bool started;
 
     public event Action? ExitRequested;
     public bool IsExiting { get; private set; }
@@ -65,6 +67,8 @@ public partial class MainWindow : Window
         PlaceWindow();
         Opened += (_, _) =>
         {
+            if (started) return;
+            started = true;
             platform.Attach(this);
             ApplyHotkey();
             Render();

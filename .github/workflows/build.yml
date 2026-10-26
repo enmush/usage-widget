@@ -57,12 +57,18 @@ jobs:
         run: |
           mkdir -p artifacts/smoke
           ditto -x -k artifacts/release/UsageWidget-*-macos-arm64.zip artifacts/smoke
-          bash tools/smoke-macos.sh "$PWD/artifacts/smoke/Usage Widget.app" artifacts/smoke/screen.png
+          bash tools/smoke-macos.sh "$PWD/artifacts/smoke/Usage Widget.app" artifacts/screen-arm64.png
+      - name: Start the x64 app under Rosetta
+        run: |
+          arch -x86_64 /usr/bin/true 2>/dev/null || softwareupdate --install-rosetta --agree-to-license
+          mkdir -p artifacts/smoke-x64
+          ditto -x -k artifacts/release/UsageWidget-*-macos-x64.zip artifacts/smoke-x64
+          bash tools/smoke-macos.sh "$PWD/artifacts/smoke-x64/Usage Widget.app" artifacts/screen-x64.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: macos-screen
-          path: artifacts/smoke/screen.png
+          path: artifacts/screen-*.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:

@@ -42,17 +42,17 @@ public sealed class CliRunner(TimeSpan timeout) : ICommandRunner
 
         var stdout = process.StandardOutput.ReadToEndAsync(ct);
         var stderr = process.StandardError.ReadToEndAsync(ct);
-        if (input is not null)
-        {
-            await process.StandardInput.WriteAsync(input);
-            process.StandardInput.Close();
-        }
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
         limit.CancelAfter(timeout);
         // Kill synchronously inside Cancel(), so an app exit cannot outrun it and orphan the CLI.
         using var kill = limit.Token.Register(() => KillTree(process));
         try
         {
+            if (input is not null)
+            {
+                await process.StandardInput.WriteAsync(input.AsMemory(), limit.Token);
+                process.StandardInput.Close();
+            }
             await process.WaitForExitAsync(limit.Token);
         }
         catch (OperationCanceledException)

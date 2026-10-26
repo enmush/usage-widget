@@ -109,7 +109,10 @@ public sealed partial class KeychainSignInStore(ICommandRunner security, IClaude
         var hex = Convert.ToHexStringLower(Encoding.UTF8.GetBytes(json));
         var result = await security.RunAsync(SecurityTool, ["-i"], null, ct,
             $"add-generic-password -U -a \"{at.Account}\" -s \"{at.Service}\" -X {hex}\n");
-        return result.ExitCode == 0;
+        if (result.ExitCode != 0) return false;
+        // security -i can end with 0 although the command inside it failed, so the item is read back.
+        var stored = await security.RunAsync(SecurityTool, ["find-generic-password", "-s", at.Service, "-w"], null, ct);
+        return stored.Output?.TrimEnd('\n') == json;
     }
 
     public async Task<bool> HasSignInAsync(ClaudeLogin login, CancellationToken ct)
