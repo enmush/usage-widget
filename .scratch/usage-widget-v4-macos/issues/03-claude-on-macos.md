@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] Claude reading goes through a sign-in store; the file store keeps today's tests green
 - [ ] Keychain service name follows Claude Code's rule (default, overridden, NFC) with tests on known values

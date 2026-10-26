@@ -106,11 +106,13 @@ public static class LoginDetector
     static readonly Dictionary<string, string> SignInMarker = new() { ["claude"] = ".credentials.json", ["codex"] = "auth.json" };
 
     /// <param name="geminiApiProject">The Google Cloud project of this PC's Gemini API key, if one was found.</param>
-    public static List<AccountSettings> Detect(string home, bool agyFound, string? geminiApiProject = null)
+    /// <param name="claudeSignedIn">Whether a Claude Login folder has a sign-in where its file is not (the macOS Keychain).</param>
+    public static List<AccountSettings> Detect(
+        string home, bool agyFound, string? geminiApiProject = null, Func<ClaudeLogin, bool>? claudeSignedIn = null)
     {
         var found = new List<AccountSettings>();
         // Claude Code keeps working from its default folder even when the token sits elsewhere, so that one counts as is.
-        AddFolders(found, home, AccountCatalog.Find("claude")!, defaultNeedsMarker: false);
+        AddFolders(found, home, AccountCatalog.Find("claude")!, defaultNeedsMarker: false, claudeSignedIn);
         AddFolders(found, home, AccountCatalog.Find("codex")!, defaultNeedsMarker: true);
         if (agyFound) found.Add(new AccountSettings("Antigravity", "antigravity"));
         if (geminiApiProject is not null)
@@ -167,7 +169,8 @@ public static class LoginDetector
         return id.Output?.Trim() is { Length: > 0 } projectId ? projectId : number;
     }
 
-    static void AddFolders(List<AccountSettings> found, string home, Provider provider, bool defaultNeedsMarker)
+    static void AddFolders(
+        List<AccountSettings> found, string home, Provider provider, bool defaultNeedsMarker, Func<ClaudeLogin, bool>? signedIn = null)
     {
         if (!Directory.Exists(home)) return;
         var prefix = provider.DefaultFolderName!;
@@ -181,7 +184,9 @@ public static class LoginDetector
         {
             var full = Path.Combine(home, folder);
             var isDefault = folder.Length == prefix.Length;
-            if ((!isDefault || defaultNeedsMarker) && !File.Exists(Path.Combine(full, SignInMarker[provider.Id]))) continue;
+            if ((!isDefault || defaultNeedsMarker) && !File.Exists(Path.Combine(full, SignInMarker[provider.Id]))
+                && signedIn?.Invoke(new ClaudeLogin(full, HasOverride: !isDefault)) != true)
+                continue;
 
             var suffix = folder[prefix.Length..].TrimStart('-', '_', '.', ' ');
             var name = suffix.Length == 0 ? provider.DisplayName : $"{provider.DisplayName} {suffix}";

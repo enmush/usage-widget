@@ -8,8 +8,11 @@ using System.Text.RegularExpressions;
 namespace UsageWidget.Core;
 
 /// <summary>Reads a Claude Account from Claude's OAuth usage endpoint with its Login folder's sign-in (ADR 0003).</summary>
-public sealed partial class ClaudeReader(HttpClient http, string home, Func<DateTimeOffset> clock)
+/// <param name="store">Where Claude Code keeps the sign-in; the Login folder's credentials file when null.</param>
+public sealed partial class ClaudeReader(HttpClient http, string home, Func<DateTimeOffset> clock, IClaudeSignInStore? store = null)
 {
+    readonly IClaudeSignInStore signIns = store ?? new FileSignInStore();
+
     const string UsageUrl = "https://api.anthropic.com/api/oauth/usage";
     const string TokenUrl = "https://platform.claude.com/v1/oauth/token";
     // Claude Code's public OAuth client id, the one its sign-in tokens were issued to.
@@ -18,27 +21,28 @@ public sealed partial class ClaudeReader(HttpClient http, string home, Func<Date
 
     public async Task<UsageRead> ReadAsync(AccountSettings account, CancellationToken ct)
     {
-        var path = Path.Combine(AccountCatalog.LoginFolder(account, home)!, ".credentials.json");
-        if (!File.Exists(path)) return UsageRead.Failure("Not signed in: open Claude Code with this Login folder");
-        if (Credentials.Load(path) is not { } creds) return UsageRead.Failure("Unreadable Claude sign-in file");
+        var login = new ClaudeLogin(AccountCatalog.LoginFolder(account, home)!,
+            account.Env?.ContainsKey(AccountCatalog.Find("claude")!.LoginFolderVariable!) == true);
+        if (await signIns.LoadAsync(login, ct) is not { } json) return UsageRead.Failure("Not signed in: open Claude Code with this Login folder");
+        if (Credentials.Parse(json) is not { } creds) return UsageRead.Failure("Unreadable Claude sign-in");
 
         if (creds.ExpiresAt <= clock().AddMinutes(1))
         {
-            if (await RefreshAsync(path, creds.AccessToken, ct) is not { } refreshed) return UsageRead.Failure(SignInAgain);
+            if (await RefreshAsync(login, creds.AccessToken, ct) is not { } refreshed) return UsageRead.Failure(SignInAgain);
             creds = refreshed;
         }
 
-        var (status, json) = await GetUsageAsync(creds.AccessToken, ct);
+        var (status, usage) = await GetUsageAsync(creds.AccessToken, ct);
         if (status == HttpStatusCode.Unauthorized)
         {
-            if (await RefreshAsync(path, creds.AccessToken, ct) is not { } refreshed) return UsageRead.Failure(SignInAgain);
+            if (await RefreshAsync(login, creds.AccessToken, ct) is not { } refreshed) return UsageRead.Failure(SignInAgain);
             creds = refreshed;
-            (status, json) = await GetUsageAsync(creds.AccessToken, ct);
+            (status, usage) = await GetUsageAsync(creds.AccessToken, ct);
         }
         if (status == HttpStatusCode.Unauthorized) return UsageRead.Failure(SignInAgain);
         if (status != HttpStatusCode.OK) return UsageRead.Failure($"Claude usage request failed (HTTP {(int)status})");
 
-        return Parse(account.Name, json!, Plan(creds.SubscriptionType, creds.RateLimitTier), clock());
+        return Parse(account.Name, usage!, Plan(creds.SubscriptionType, creds.RateLimitTier), clock());
     }
 
     async Task<(HttpStatusCode, string?)> GetUsageAsync(string token, CancellationToken ct)
@@ -53,12 +57,15 @@ public sealed partial class ClaudeReader(HttpClient http, string home, Func<Date
     /// <summary>
     /// Refreshes the sign-in and writes the new tokens back, so Claude Code keeps working with the rotated
     /// refresh token. If Claude Code already replaced the token we just used, its fresh one is taken instead.
+    /// A sign-in that cannot be written back is never refreshed: the old refresh token would stop working
+    /// and sign Claude Code out.
     /// </summary>
-    async Task<Credentials?> RefreshAsync(string path, string usedToken, CancellationToken ct)
+    async Task<Credentials?> RefreshAsync(ClaudeLogin login, string usedToken, CancellationToken ct)
     {
-        if (Credentials.Load(path) is not { } current) return null;
+        if (await signIns.LoadAsync(login, ct) is not { } json || Credentials.Parse(json) is not { } current) return null;
         if (current.AccessToken != usedToken && current.ExpiresAt > clock().AddMinutes(1)) return current;
         if (string.IsNullOrEmpty(current.RefreshToken)) return null;
+        if (!await signIns.SaveAsync(login, json, ct)) return null;
 
         using var response = await http.PostAsJsonAsync(TokenUrl, new Dictionary<string, string>
         {
@@ -74,14 +81,8 @@ public sealed partial class ClaudeReader(HttpClient http, string home, Func<Date
         var refresh = JsonRead.Str(doc.RootElement, "refresh_token") ?? current.RefreshToken;
         var expiresAt = clock().AddSeconds(JsonRead.Num(doc.RootElement, "expires_in") ?? 3600);
 
-        try
-        {
-            Credentials.Save(path, access, refresh, expiresAt);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
-        {
-            // The tokens still work for this read; Claude Code will ask to sign in again if the file stays old.
-        }
+        // The tokens still work for this read; Claude Code will ask to sign in again if this save fails.
+        if (Credentials.WithTokens(json, access, refresh, expiresAt) is { } updated) await signIns.SaveAsync(login, updated, ct);
         return current with { AccessToken = access, RefreshToken = refresh, ExpiresAt = expiresAt };
     }
 
@@ -119,32 +120,36 @@ public sealed partial class ClaudeReader(HttpClient http, string home, Func<Date
 
     sealed record Credentials(string AccessToken, string? RefreshToken, DateTimeOffset ExpiresAt, string? SubscriptionType, string? RateLimitTier)
     {
-        public static Credentials? Load(string path)
+        public static Credentials? Parse(string json)
         {
             try
             {
-                using var doc = JsonDocument.Parse(File.ReadAllText(path));
+                using var doc = JsonDocument.Parse(json);
                 if (JsonRead.Obj(doc.RootElement, "claudeAiOauth") is not { } o || JsonRead.Str(o, "accessToken") is not { } access) return null;
                 var expires = JsonRead.Num(o, "expiresAt") is { } ms ? DateTimeOffset.FromUnixTimeMilliseconds((long)ms) : DateTimeOffset.MinValue;
                 return new(access, JsonRead.Str(o, "refreshToken"), expires, JsonRead.Str(o, "subscriptionType"), JsonRead.Str(o, "rateLimitTier"));
             }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+            catch (JsonException)
             {
                 return null;
             }
         }
 
-        /// <summary>Replaces only the token fields, through a temp file, so a crash never leaves half a file.</summary>
-        public static void Save(string path, string access, string refresh, DateTimeOffset expiresAt)
+        /// <summary>The sign-in JSON with only the token fields replaced, or null when it has no claudeAiOauth object.</summary>
+        public static string? WithTokens(string json, string access, string refresh, DateTimeOffset expiresAt)
         {
-            if (JsonNode.Parse(File.ReadAllText(path)) is not JsonObject root || root["claudeAiOauth"] is not JsonObject oauth)
-                throw new JsonException("No claudeAiOauth object");
-            oauth["accessToken"] = access;
-            oauth["refreshToken"] = refresh;
-            oauth["expiresAt"] = expiresAt.ToUnixTimeMilliseconds();
-            var temp = path + ".usage-widget.tmp";
-            File.WriteAllText(temp, root.ToJsonString());
-            File.Move(temp, path, overwrite: true);
+            try
+            {
+                if (JsonNode.Parse(json) is not JsonObject root || root["claudeAiOauth"] is not JsonObject oauth) return null;
+                oauth["accessToken"] = access;
+                oauth["refreshToken"] = refresh;
+                oauth["expiresAt"] = expiresAt.ToUnixTimeMilliseconds();
+                return root.ToJsonString();
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
         }
     }
 }

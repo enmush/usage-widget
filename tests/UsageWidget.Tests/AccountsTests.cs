@@ -27,6 +27,18 @@ public sealed class AccountsTests : IDisposable
     }
 
     [Fact]
+    public void Claude_folder_signed_in_outside_the_folder_is_detected()
+    {
+        Folder(".claude");
+        var acct2 = Folder(".claude-acct2");
+        Folder(".claude-old");
+
+        var found = LoginDetector.Detect(home, agyFound: false, claudeSignedIn: login => login.Folder == acct2 && login.HasOverride);
+
+        Assert.Equal(["Claude", "Claude acct2"], found.Select(a => a.Name));
+    }
+
+    [Fact]
     public void Login_folder_typed_with_a_tilde_starts_at_home()
     {
         var folder = Folder(".claude-acct2");
@@ -133,13 +145,17 @@ public sealed class AccountsTests : IDisposable
         Assert.Equal(["Claude 2", "Codex work"], found.Select(a => a.Name));
     }
 
-    [Theory]
-    [InlineData(@"C:\Users\jun\.claude", "~\\.claude")]
-    [InlineData(@"C:\Users\jun2\x", @"C:\Users\jun2\x")]
-    [InlineData(@"D:\logins\codex", @"D:\logins\codex")]
-    public void Folders_under_home_display_with_a_tilde(string folder, string shown)
+    [Fact]
+    public void Folders_under_home_display_with_a_tilde()
     {
-        Assert.Equal(shown, AccountCatalog.DisplayFolder(folder, @"C:\Users\jun"));
+        var root = Path.GetPathRoot(home)!;
+        var user = Path.Combine(root, "Users", "jun");
+        var other = Path.Combine(root, "Users", "jun2", "x");
+        var elsewhere = Path.Combine(root, "logins", "codex");
+
+        Assert.Equal($"~{Path.DirectorySeparatorChar}.claude", AccountCatalog.DisplayFolder(Path.Combine(user, ".claude"), user));
+        Assert.Equal(other, AccountCatalog.DisplayFolder(other, user));
+        Assert.Equal(elsewhere, AccountCatalog.DisplayFolder(elsewhere, user));
     }
 
     [Fact]
@@ -184,9 +200,10 @@ public sealed class AccountsTests : IDisposable
     {
         var existing = new List<AccountSettings>
         {
-            new("Claude 2", "claude", new() { ["CLAUDE_CONFIG_DIR"] = @"%USERPROFILE%\.claude-acct2" }),
+            new("Claude 2", "claude", new() { ["CLAUDE_CONFIG_DIR"] = $"%UW_TEST_HOME%{Path.DirectorySeparatorChar}.claude-acct2" }),
         };
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        Environment.SetEnvironmentVariable("UW_TEST_HOME", userProfile);
         var detected = new List<AccountSettings>
         {
             new("Claude acct2", "claude", new() { ["CLAUDE_CONFIG_DIR"] = Path.Combine(userProfile, ".claude-acct2") }),

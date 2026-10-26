@@ -6,7 +6,7 @@ public sealed class UsageService(WidgetSettings settings, HttpClient http)
     const string AnnouncementUrl = "https://codex-resets.com/api/v1/status";
     static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(120);
 
-    readonly ClaudeReader claude = new(http, Home, () => DateTimeOffset.Now);
+    readonly ClaudeReader claude = new(http, Home, () => DateTimeOffset.Now, IClaudeSignInStore.ForThisComputer());
     readonly CodexReader codex = new(http, Home, () => DateTimeOffset.Now);
     // Shorter than ReadTimeout, so a hung agy is reported as timed out rather than cancelled.
     readonly AntigravityReader antigravity = new(new CliRunner(ReadTimeout - TimeSpan.FromSeconds(10)), LoginDetector.AgyPath, () => DateTimeOffset.Now);

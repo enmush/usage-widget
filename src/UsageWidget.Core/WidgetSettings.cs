@@ -25,10 +25,14 @@ public sealed class WidgetSettings
     /// <summary>The Accounts signed in on this PC, used on first run and by "Detect logins".</summary>
     /// The Gemini API lookup runs gcloud for a few seconds, so the first run skips it and only "Detect logins" does it.
     public static List<AccountSettings> DetectAccounts(bool includeGeminiApi = false) => Task.Run(async () =>
-        LoginDetector.Detect(
+    {
+        var signIns = IClaudeSignInStore.ForThisComputer();
+        return LoginDetector.Detect(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             LoginDetector.AgyPath() is not null,
-            includeGeminiApi ? await LoginDetector.GeminiApiProjectAsync(CancellationToken.None) : null)).GetAwaiter().GetResult();
+            includeGeminiApi ? await LoginDetector.GeminiApiProjectAsync(CancellationToken.None) : null,
+            login => signIns.HasSignInAsync(login, CancellationToken.None).GetAwaiter().GetResult());
+    }).GetAwaiter().GetResult();
 
     static readonly JsonSerializerOptions Json = new()
     {

@@ -112,6 +112,27 @@ public sealed class ClaudeReaderTests : IDisposable
     }
 
     [Fact]
+    public async Task Expired_sign_in_that_cannot_be_saved_back_is_not_refreshed()
+    {
+        WriteCredentials("access-1", Now.AddMinutes(-5));
+        var reader = new ClaudeReader(new HttpClient(handler), home, () => Now, new ReadOnlyStore());
+
+        var read = await reader.ReadAsync(account, CancellationToken.None);
+
+        Assert.Equal(0, handler.TokenCalls);
+        Assert.Equal("Sign-in expired: open Claude Code with this Login folder", read.Error);
+    }
+
+    /// <summary>A store whose sign-in can be read but not written, like a Keychain item the widget may not change.</summary>
+    sealed class ReadOnlyStore : IClaudeSignInStore
+    {
+        readonly FileSignInStore file = new();
+        public Task<string?> LoadAsync(ClaudeLogin login, CancellationToken ct) => file.LoadAsync(login, ct);
+        public Task<bool> SaveAsync(ClaudeLogin login, string json, CancellationToken ct) => Task.FromResult(false);
+        public Task<bool> HasSignInAsync(ClaudeLogin login, CancellationToken ct) => file.HasSignInAsync(login, ct);
+    }
+
+    [Fact]
     public async Task Missing_sign_in_file_says_so()
     {
         var read = await Read();

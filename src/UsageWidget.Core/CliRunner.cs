@@ -2,19 +2,27 @@ using System.Diagnostics;
 
 namespace UsageWidget.Core;
 
-/// <summary>Output of one CLI run, or why it produced none.</summary>
-public sealed record CliResult(string? Output, string? Error);
+/// <summary>Output of one CLI run, or why it produced none; the exit code is null when the CLI never finished.</summary>
+public sealed record CliResult(string? Output, string? Error, int? ExitCode = null);
 
-/// <summary>Runs a Provider's own CLI (agy, gcloud) and kills its whole process tree on timeout or cancel.</summary>
-public sealed class CliRunner(TimeSpan timeout)
+/// <summary>Runs a command-line tool; the seam the readers and the Keychain store use.</summary>
+public interface ICommandRunner
 {
     /// <param name="workingDirectory">Null runs in the widget's own folder.</param>
-    public async Task<CliResult> RunAsync(string exe, IEnumerable<string> args, string? workingDirectory, CancellationToken ct)
+    /// <param name="input">Text written to the tool's standard input, then closed; null leaves it unused.</param>
+    Task<CliResult> RunAsync(string exe, IEnumerable<string> args, string? workingDirectory, CancellationToken ct, string? input = null);
+}
+
+/// <summary>Runs a Provider's own CLI (agy, gcloud) or a system tool and kills its whole process tree on timeout or cancel.</summary>
+public sealed class CliRunner(TimeSpan timeout) : ICommandRunner
+{
+    public async Task<CliResult> RunAsync(string exe, IEnumerable<string> args, string? workingDirectory, CancellationToken ct, string? input = null)
     {
         var psi = new ProcessStartInfo(exe)
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = input is not null,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -34,6 +42,11 @@ public sealed class CliRunner(TimeSpan timeout)
 
         var stdout = process.StandardOutput.ReadToEndAsync(ct);
         var stderr = process.StandardError.ReadToEndAsync(ct);
+        if (input is not null)
+        {
+            await process.StandardInput.WriteAsync(input);
+            process.StandardInput.Close();
+        }
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
         limit.CancelAfter(timeout);
         // Kill synchronously inside Cancel(), so an app exit cannot outrun it and orphan the CLI.
@@ -49,9 +62,9 @@ public sealed class CliRunner(TimeSpan timeout)
 
         var output = await stdout;
         var error = await stderr;
-        if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output)) return new(output, null);
+        if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output)) return new(output, null, 0);
         var reason = error.Trim().Split('\n').LastOrDefault(l => !string.IsNullOrWhiteSpace(l))?.Trim();
-        return new(null, $"{Path.GetFileName(exe)} exited with code {process.ExitCode}" + (reason is null ? "" : $": {reason}"));
+        return new(null, $"{Path.GetFileName(exe)} exited with code {process.ExitCode}" + (reason is null ? "" : $": {reason}"), process.ExitCode);
     }
 
     static void KillTree(Process process)

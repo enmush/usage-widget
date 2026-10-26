@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] Platform services have a macOS implementation chosen at start-up (settings path, single instance, open URL, folder picker, window behaviour)
 - [ ] Settings path is `~/Library/Application Support/UsageWidget/settings.json` on macOS and unchanged on Windows, covered by tests
